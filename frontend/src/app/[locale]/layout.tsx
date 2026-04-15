@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { routing } from "@/i18n/routing";
 import { QueryProvider } from "@/providers/query-provider";
+import { Sidebar } from "@/components/navigation/sidebar"; // 1. Importamos la Sidebar
 
 type LocaleLayoutProps = {
   children: React.ReactNode;
@@ -25,8 +26,20 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
-      <QueryProvider>{children}</QueryProvider>
-    </NextIntlClientProvider>
+    <html lang={locale}>
+      <body className="bg-slate-950">
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <QueryProvider>
+            {/* 2. Estructura de navegación lateral */}
+            <div className="flex min-h-screen">
+              <Sidebar />
+              <main className="flex-1 overflow-y-auto">
+                {children}
+              </main>
+            </div>
+          </QueryProvider>
+        </NextIntlClientProvider>
+      </body>
+    </html>
   );
 }
