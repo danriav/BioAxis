@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useAnimate } from "framer-motion";
 import { useTranslations } from "next-intl";
+import { AlertCircle } from "lucide-react"; // Importamos el icono para el aviso
 
 import { useSaveBodyMeasurements } from "@/hooks/use-save-body-measurements";
 import { syncPendingBodyMeasurements } from "@/lib/body-measurements/sync";
@@ -83,7 +84,7 @@ function toPayload(formState: FormState): BodyMeasurementsInput {
     weightKg: Number(formState.weightKg),
     heightCm: Number(formState.heightCm),
     femurLengthCm: Number(formState.femurLengthCm),
-    torsoLengthCm: Number(formState.heightCm),
+    torsoLengthCm: Number(formState.heightCm) * 0.3, // Cálculo estimado
   };
 }
 
@@ -227,6 +228,23 @@ export function OnboardingForm() {
     };
   }, []);
 
+  // --- LÓGICA BIOMECÁNICA (INSIGHT) ---
+  const biomechanicalInsight = useMemo(() => {
+    const femur = Number(formState.femurLengthCm);
+    const height = Number(formState.heightCm);
+    if (!femur || !height) return null;
+
+    const ratio = (femur / height) * 100;
+    // Ratio > 25.8% indica fémures largos
+    if (ratio > 25.8) {
+      return {
+        title: "Detección de Palancas Largas",
+        message: "Tus proporciones indican dominancia de cadera. Priorizaremos variantes de sentadilla que favorezcan el torque en glúteo para optimizar tu mecánica."
+      };
+    }
+    return null;
+  }, [formState.femurLengthCm, formState.heightCm]);
+
   const isSubmitting = mutation.isPending;
   const showSuccessMessage = mutation.isSuccess;
   const isOffline = useMemo(() => typeof navigator !== "undefined" && !navigator.onLine, []);
@@ -268,7 +286,7 @@ export function OnboardingForm() {
         </div>
 
         <h1 className="text-3xl font-semibold tracking-tight text-white">{t("title")}</h1>
-        <p className="mt-2 text-sm text-slate-300">{t("subtitle")}</p>
+        <h2 className="mt-2 text-sm text-slate-300">{t("subtitle")}</h2>
 
         <form className="mt-8" onSubmit={onSubmit}>
           <AnimatePresence mode="wait">
@@ -281,17 +299,16 @@ export function OnboardingForm() {
                 exit={{ opacity: 0, x: -40 }}
                 transition={{ duration: 0.35, ease: "easeInOut" }}
               >
-                <motion.label
+                <motion.div
                   className="block text-sm font-medium text-slate-200"
-                  htmlFor="weightKg"
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.08 }}
                 >
-                  <span className="inline-flex items-center gap-2">
+                  <label htmlFor="weightKg" className="inline-flex items-center gap-2 mb-2">
                     {t("fields.weight")}
                     <FieldHelp text={t("help.weight")} completed={isFieldComplete(formState.weightKg)} />
-                  </span>
+                  </label>
                   <NumericStepper
                     required
                     id="weightKg"
@@ -305,19 +322,18 @@ export function OnboardingForm() {
                       setFormState((prev) => ({ ...prev, weightKg: nextValue }))
                     }
                   />
-                </motion.label>
+                </motion.div>
 
-                <motion.label
+                <motion.div
                   className="block text-sm font-medium text-slate-200"
-                  htmlFor="heightCm"
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.14 }}
                 >
-                  <span className="inline-flex items-center gap-2">
+                  <label htmlFor="heightCm" className="inline-flex items-center gap-2 mb-2">
                     {t("fields.height")}
                     <FieldHelp text={t("help.height")} completed={isFieldComplete(formState.heightCm)} />
-                  </span>
+                  </label>
                   <NumericStepper
                     required
                     id="heightCm"
@@ -331,7 +347,7 @@ export function OnboardingForm() {
                       setFormState((prev) => ({ ...prev, heightCm: nextValue }))
                     }
                   />
-                </motion.label>
+                </motion.div>
 
                 <div className="md:col-span-2 flex justify-end">
                   <button
@@ -354,20 +370,19 @@ export function OnboardingForm() {
                 exit={{ opacity: 0, x: -40 }}
                 transition={{ duration: 0.35, ease: "easeInOut" }}
               >
-                <motion.label
+                <motion.div
                   className="block text-sm font-medium text-slate-200 md:col-span-2"
-                  htmlFor="femurLengthCm"
                   initial={{ opacity: 0, y: 14 }}
                   animate={{ opacity: 1, y: 0 }}
                 >
-                  <span className="inline-flex items-center gap-2">
+                  <label htmlFor="femurLengthCm" className="inline-flex items-center gap-2 mb-2">
                     {t("fields.femurLength")}
                     <FemurMeasureIcon />
                     <FieldHelp
                       text={t("help.femurLength")}
                       completed={isFieldComplete(formState.femurLengthCm)}
                     />
-                  </span>
+                  </label>
                   <NumericStepper
                     required
                     id="femurLengthCm"
@@ -381,7 +396,31 @@ export function OnboardingForm() {
                       setFormState((prev) => ({ ...prev, femurLengthCm: nextValue }))
                     }
                   />
-                </motion.label>
+
+                  {/* --- TARJETA DE INTELIGENCIA BIOMECÁNICA --- */}
+                  <AnimatePresence>
+                    {biomechanicalInsight && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                        animate={{ opacity: 1, height: "auto", marginTop: 20 }}
+                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                        className="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-4 overflow-hidden"
+                      >
+                        <div className="flex gap-3">
+                          <AlertCircle className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-xs font-bold text-cyan-400 uppercase tracking-widest mb-1">
+                              {biomechanicalInsight.title}
+                            </p>
+                            <p className="text-sm text-slate-300 leading-relaxed">
+                              {biomechanicalInsight.message}
+                            </p>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
 
                 <div className="md:col-span-2 flex items-center justify-between gap-3">
                   <button
