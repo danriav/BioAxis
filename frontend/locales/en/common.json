@@ -1,0 +1,37 @@
+{
+  "home": {
+    "title": "HealthTech Ecosystem",
+    "description": "Initial frontend with Next.js, Tailwind, internationalization, and offline-first strategy.",
+    "switchLanguage": "Switch to Spanish"
+  },
+  "profileSetup": {
+    "title": "Set up your body measurements",
+    "subtitle": "These metrics help us personalize biomechanics and training recommendations.",
+    "fields": {
+      "age": "Age",
+      "gender": "Biological sex",
+      "weight": "Weight (kg)",
+      "height": "Height (cm)",
+      "femurLength": "Femur length (cm)",
+      "torsoLength": "Torso length (cm)"
+    },
+    "genderOptions": {
+      "male": "Male",
+      "female": "Female",
+      "other": "Other"
+    },
+    "help": {
+      "weight": "Your current body weight used for personalized load guidance.",
+      "height": "Your standing height used for movement leverage estimates.",
+      "femurLength": "Measure from your hip joint to the top of your knee.",
+      "torsoLength": "Measure from the base of your neck to your hip."
+    },
+    "progressLabel": "Completion",
+    "next": "Continue",
+    "back": "Back",
+    "submit": "Save and continue",
+    "saving": "Saving...",
+    "success": "Data saved locally. It will sync to Supabase when online.",
+    "offlineNotice": "Offline mode: your data is saved now and will sync automatically when you are online again."
+  }
+}

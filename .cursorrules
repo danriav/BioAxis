@@ -1,0 +1,117 @@
+```
+# ═══════════════════════════════════════════════════════════════
+# .cursorrules — HealthTech Ecosystem
+# Version: 1.0.0
+# ═══════════════════════════════════════════════════════════════
+
+## LANGUAGE & CODE CONVENTIONS
+- All code MUST be written in English: variable names, function names,
+  class names, database identifiers, constants, enums, and comments.
+- UI strings and user-facing text MUST use i18n keys (NEVER hardcode
+  display text in components). Example: t('nutrition.clone_day_button')
+- Use BCP-47 locale codes ('es', 'en', 'es-MX'). Default locale: 'es'.
+- All i18n translation files live under /locales/{locale}/namespace.json.
+- Add every new string to BOTH /locales/es/ and /locales/en/ simultaneously.
+
+## ARCHITECTURE & PATTERNS
+- Follow a strict Offline-First pattern: EVERY data mutation must:
+  1. Write to IndexedDB (Dexie) FIRST.
+  2. Enqueue in the syncQueue table.
+  3. Update the TanStack Query cache optimistically.
+  4. Attempt server sync; handle 409 conflicts gracefully.
+- Never bypass the sync queue for user-generated data (logs, nutrition).
+- Use networkMode: 'offlineFirst' on ALL TanStack Query hooks.
+- Service Worker background sync tag: 'sync-pending-mutations' (constant).
+
+## BIOMECHANICS — CALCULATION INTEGRITY
+- Quad-focus variant REQUIRES: knee_travel_past_toe = TRUE
+  and shin_angle_target_deg < 75° (knee over toes protocol).
+- Glute-focus variant REQUIRES: knee_travel_past_toe = FALSE,
+  shin angle ≥ 85° (near-vertical shin), hip_hinge_depth = 'deep'.
+- NEVER swap quad/glute focus logic. Add a unit test for any function
+  that derives focus from joint angles.
+- Anthropometric compensation rule: if femur_length_cm > 48, apply
+  +5° forward lean tolerance to squat variants (biomechanical necessity).
+- Moment arm calculations must use SI units (meters, Newtons) internally;
+  convert to display units only at the presentation layer.
+
+## TRAINING VOLUME — ENFORCEMENT
+- The 20-set/week per-muscle-group cap is a HARD business rule.
+  Enforce it at THREE layers:
+  1. Database: weekly_volume_caps.cap_sets constraint.
+  2. API: FastAPI endpoint must validate before inserting session_exercises.
+  3. UI: Disable "add exercise" button and show warning when cap is reached.
+- Never allow the weekly cap to be silently exceeded.
+- Volume calculation: count sets by primary_muscle_group only (not secondary).
+
+## NUTRITION — MICRO TRACKING
+- Tracked micros list (all required on nutrition_log_entries):
+  fiber_g, sugar_g, sodium_mg, saturated_fat_g, trans_fat_g.
+- "Clone Day" feature: duplicate ALL nutrition_log_entries from a source
+  log_date to the target log_date. Set cloned_from_log_id on the new record.
+- "Base Meal" apply: copy base_meal_items to nutrition_log_entries;
+  set base_meal_id reference. Allow post-apply editing without
+  modifying the original base_meal.
+- Computed nutrient columns on nutrition_log_entries are denormalized
+  and recalculated on every insert/update (not at read time).
+
+## FREEMIUM GATING
+- Premium features: advanced biomechanics variants, Clone Day, Base Meals,
+  detailed micro tracking, custom training plan builder.
+- Free features: basic logging, default exercise catalog, macro tracking.
+- Gate premium at the API layer (subscription_tier check in middleware).
+- Also gate in UI with a consistent <PremiumGate> wrapper component.
+- NEVER expose premium data in API responses for free users, even if
+  the frontend would hide it.
+
+## ACCESSIBILITY — WCAG AAA
+- All interactive elements MUST have aria-label or visible text label.
+- Color contrast ratio: minimum 7:1 for normal text (WCAG AAA).
+- Form inputs: always pair <label> with input via htmlFor/id.
+- Focus indicators: never remove outline; use a custom 3px solid ring.
+- Motion: wrap all CSS animations in @media (prefers-reduced-motion: reduce).
+- Touch targets: minimum 48×48px (WCAG 2.5.5 AAA).
+- All images: alt text required; decorative images use alt="".
+
+## SYNC & CONFLICT RESOLUTION
+- Conflict resolution strategy: "Last Write Wins" by default,
+  using updated_at timestamp comparison.
+- On 409 from server: store conflict_data in syncQueue entry,
+  surface a ConflictResolutionDialog in the UI for user choice.
+- client_id: generated once per device/browser session; stored in
+  localStorage. Format: UUID v4.
+- local_version: increment by 1 on every local mutation.
+- Never delete from syncQueue; mark as 'synced' or 'failed' for audit.
+
+## DATABASE & API
+- All timestamps: TIMESTAMPTZ (UTC). Never use plain TIMESTAMP.
+- Soft deletes ONLY: use deleted_at column, never hard DELETE.
+- All UUIDs: gen_random_uuid() (PostgreSQL) / crypto.randomUUID() (client).
+- FastAPI routes: use async/await throughout; no synchronous DB calls.
+- Pydantic models: explicit field validators for all business rules
+  (e.g., rep_range_min < rep_range_max, rir 0–4 range).
+- API versioning prefix: /api/v1/
+
+## TESTING REQUIREMENTS
+- Unit tests required for: volume cap enforcement, biomechanical focus
+  derivation, macro/micro calculation, Clone Day logic.
+- Integration tests required for: sync queue flush, conflict resolution,
+  offline → online transition flow.
+- Accessibility: run axe-core in CI on all page components.
+- Test file location: __tests__/ mirroring src/ directory structure.
+
+## SECURITY
+- Never expose Supabase service_role key to the client.
+- All API endpoints: JWT authentication via Supabase Auth.
+- User data isolation: every query MUST filter by user_id = current_user.id.
+- Input sanitization: strip HTML from all text fields before storage.
+- Rate limiting: 100 req/min per user on sync endpoints.
+
+## CODE QUALITY
+- No any type in TypeScript (use unknown and type guards instead).
+- Functions > 40 lines should be refactored.
+- No magic numbers: define named constants for all biomechanical thresholds,
+  volume caps, and nutrition limits.
+- ESLint + Prettier enforced in CI; PRs with lint errors are blocked.
+- Commit convention: Conventional Commits (feat:, fix:, docs:, refactor:).
+```
