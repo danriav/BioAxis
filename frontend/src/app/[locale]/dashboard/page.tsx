@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { WorkoutLogger } from "@/components/workout/workout-logger";
+import { EvolutionChart } from "@/components/dashboard/evolution-chart"; // Asegúrate de que esta ruta sea correcta
 import { TestWorkoutButton } from "@/components/workout/test-workout-button";
 import { MagicRoutineGenerator } from "@/components/workout/magic-routine-generator";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,10 +10,6 @@ import {
   Activity, Zap, Target, ChevronRight,
   ShieldCheck, Scale, Ruler, Star, Heart, Loader2
 } from "lucide-react";
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer
-} from 'recharts';
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 // --- ESTILOS REUTILIZABLES ---
@@ -21,7 +18,6 @@ const glowStyle = "absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-60
 
 export default function ScientificDashboard() {
   const [userBio, setUserBio] = useState<any>(null);
-  const [evolutionData, setEvolutionData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"bio_dedicado" | "arquitecto">("bio_dedicado");
   const [metrics, setMetrics] = useState({
@@ -47,25 +43,18 @@ export default function ScientificDashboard() {
           return;
         }
 
-        // 1. OBTENER EL PERFIL MÁS RECIENTE (Versión Robusta)
+        // 1. OBTENER EL PERFIL MÁS RECIENTE (Solución de empates)
+        // Usamos created_at en lugar de valid_from para ignorar la basura de las pruebas rápidas
         const { data: currentData, error: currentError } = await supabase
           .from('dim_atleta')
           .select('*')
           .eq('user_id', user.id)
-          .order('valid_from', { ascending: false }) // Trae el último insertado
+          .order('created_at', { ascending: false }) 
           .limit(1);
 
-        // Definimos currentBio a partir de la respuesta del array
         const currentBio = (currentData && currentData.length > 0) ? currentData[0] : null;
 
-        // 2. OBTENER EL HISTORIAL PARA LA GRÁFICA
-        const { data: history, error: historyError } = await supabase
-          .from('dim_atleta')
-          .select('valid_from, peso, hombros, cintura, cadera, genero')
-          .eq('user_id', user.id)
-          .order('valid_from', { ascending: true });
-
-        // Si tenemos datos actuales, procesamos métricas
+        // Si tenemos datos actuales, procesamos métricas para el encabezado
         if (currentBio) {
           setUserBio(currentBio);
 
@@ -97,17 +86,6 @@ export default function ScientificDashboard() {
             gap: Math.abs(b - p) || 0,
             isMale
           });
-        }
-
-        if (history) {
-          const formattedHistory = history.map(entry => ({
-            fecha: new Date(entry.valid_from).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
-            peso: entry.peso,
-            vtaper: entry.genero === 'hombre'
-              ? (entry.cintura > 0 ? Number((entry.hombros / entry.cintura).toFixed(2)) : 0)
-              : (entry.cadera > 0 ? Number((entry.cintura / entry.cadera).toFixed(2)) : 0)
-          }));
-          setEvolutionData(formattedHistory);
         }
 
       } catch (err) {
@@ -196,32 +174,15 @@ export default function ScientificDashboard() {
 
         {/* COLUMNA 1: EVOLUCIÓN Y GRÁFICAS */}
         <motion.div className="lg:col-span-2 space-y-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className={cardStyle + " relative group overflow-hidden min-h-[450px]"}>
+          
+          {/* EL GRAN DIVORCIO: Aquí inyectamos el componente EvolutionChart limpio */}
+          <div className="relative z-10">
+            <EvolutionChart />
+          </div>
+
+          <div className={cardStyle + " relative group overflow-hidden"}>
             <div className={glowStyle} />
-            <div className="flex justify-between items-start mb-8 relative z-10">
-              <h2 className="text-lg font-bold flex items-center gap-2 text-white italic text-left uppercase">
-                <Activity className="text-cyan-400" size={20} /> Evolución Histórica
-              </h2>
-              <div className="text-right">
-                <span className="text-2xl font-black text-white italic">{metrics.mainRatio}</span>
-                <p className="text-[10px] text-cyan-500 font-bold uppercase tracking-widest font-mono">{metrics.label}</p>
-              </div>
-            </div>
-
-            <div className="h-[300px] w-full relative z-10">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={evolutionData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                  <XAxis dataKey="fecha" stroke="#475569" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis hide domain={['auto', 'auto']} />
-                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '1rem' }} />
-                  <Line type="monotone" dataKey="vtaper" stroke="#06b6d4" strokeWidth={4} dot={{ r: 4, fill: '#06b6d4' }} />
-                  <Line type="monotone" dataKey="peso" stroke="#818cf8" strokeWidth={2} strokeDasharray="5 5" dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4 mt-6 border-t border-slate-800 pt-6 relative z-10">
+            <div className="grid grid-cols-3 gap-4 relative z-10">
               <div className="text-center">
                 <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Hombros</p>
                 <p className="text-lg font-black text-white">{userBio?.hombros || "--"}cm</p>
