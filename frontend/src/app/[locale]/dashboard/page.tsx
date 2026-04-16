@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { WorkoutLogger } from "@/components/workout/workout-logger";
 import { TestWorkoutButton } from "@/components/workout/test-workout-button";
-import { motion } from "framer-motion";
-import { 
-  Activity, Zap, Target, ChevronRight, 
+import { MagicRoutineGenerator } from "@/components/workout/magic-routine-generator";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  Activity, Zap, Target, ChevronRight,
   ShieldCheck, Scale, Ruler, Star, Heart, Loader2
 } from "lucide-react";
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer 
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid,
+  Tooltip, ResponsiveContainer
 } from 'recharts';
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -21,6 +23,7 @@ export default function ScientificDashboard() {
   const [userBio, setUserBio] = useState<any>(null);
   const [evolutionData, setEvolutionData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"bio_dedicado" | "arquitecto">("bio_dedicado");
   const [metrics, setMetrics] = useState({
     mainRatio: 0,
     label: "Calculando...",
@@ -29,12 +32,15 @@ export default function ScientificDashboard() {
     isMale: true
   });
 
-useEffect(() => {
+  useEffect(() => {
     const fetchBioData = async () => {
       const supabase = getSupabaseClient();
       if (!supabase) return;
 
       try {
+        const pref = localStorage.getItem("bioaxis_training_preference");
+        if (pref === "arquitecto") setActiveTab("arquitecto");
+
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           setLoading(false);
@@ -62,7 +68,7 @@ useEffect(() => {
         // Si tenemos datos actuales, procesamos métricas
         if (currentBio) {
           setUserBio(currentBio);
-          
+
           const h = Number(currentBio.hombros) || 0;
           const c = Number(currentBio.cintura) || 0;
           const hip = Number(currentBio.cadera) || 0;
@@ -97,7 +103,7 @@ useEffect(() => {
           const formattedHistory = history.map(entry => ({
             fecha: new Date(entry.valid_from).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
             peso: entry.peso,
-            vtaper: entry.genero === 'hombre' 
+            vtaper: entry.genero === 'hombre'
               ? (entry.cintura > 0 ? Number((entry.hombros / entry.cintura).toFixed(2)) : 0)
               : (entry.cadera > 0 ? Number((entry.cintura / entry.cadera).toFixed(2)) : 0)
           }));
@@ -130,7 +136,7 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10 font-sans">
-      
+
       {/* HEADER DINÁMICO */}
       <header className="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
@@ -138,7 +144,7 @@ useEffect(() => {
             {metrics.isMale ? "Estructura Apex" : "Atleta Alpha"} <span className="text-cyan-500 underline decoration-cyan-500/20">Bioaxis</span>
           </h1>
           <p className="text-slate-500 flex items-center gap-2 mt-1 font-medium">
-            <ShieldCheck size={16} className="text-cyan-500" /> 
+            <ShieldCheck size={16} className="text-cyan-500" />
             ID: {userBio?.edad || "--"} años | {weight || "--"} kg | {userBio?.genero?.toUpperCase() || "S/D"}
           </p>
         </motion.div>
@@ -148,12 +154,46 @@ useEffect(() => {
           <span className="text-xs font-mono text-slate-400 uppercase tracking-tighter">Motor de Simetría: Kimball Activo</span>
         </div>
       </header>
-      <div className="max-w-7xl mx-auto mb-8 flex justify-end">
-   <TestWorkoutButton />
-  </div>
+      
+      {/* TABS DE ENTRENAMIENTO */}
+      <div className="max-w-7xl mx-auto px-4 pb-4">
+        <div className="flex gap-4 border-b border-slate-800 pb-2">
+          <button
+            onClick={() => setActiveTab("bio_dedicado")}
+            className={`pb-2 px-2 text-sm font-black uppercase tracking-widest transition-all ${
+              activeTab === "bio_dedicado" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            Bio-Dedicado (IA)
+          </button>
+          <button
+            onClick={() => setActiveTab("arquitecto")}
+            className={`pb-2 px-2 text-sm font-black uppercase tracking-widest transition-all ${
+              activeTab === "arquitecto" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-slate-500 hover:text-slate-300"
+            }`}
+          >
+            Arquitecto (Manual)
+          </button>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-4 mb-8">
+        <AnimatePresence mode="wait">
+          {activeTab === "bio_dedicado" && (
+            <motion.section key="bio" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+              <MagicRoutineGenerator />
+            </motion.section>
+          )}
+          {activeTab === "arquitecto" && (
+            <motion.section key="arq" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+              <WorkoutLogger />
+            </motion.section>
+          )}
+        </AnimatePresence>
+      </div>
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* COLUMNA 1: EVOLUCIÓN Y GRÁFICAS */}
         <motion.div className="lg:col-span-2 space-y-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
           <div className={cardStyle + " relative group overflow-hidden min-h-[450px]"}>
@@ -167,7 +207,7 @@ useEffect(() => {
                 <p className="text-[10px] text-cyan-500 font-bold uppercase tracking-widest font-mono">{metrics.label}</p>
               </div>
             </div>
-            
+
             <div className="h-[300px] w-full relative z-10">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={evolutionData}>
@@ -180,7 +220,7 @@ useEffect(() => {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            
+
             <div className="grid grid-cols-3 gap-4 mt-6 border-t border-slate-800 pt-6 relative z-10">
               <div className="text-center">
                 <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Hombros</p>
@@ -205,7 +245,7 @@ useEffect(() => {
               </h3>
               <p className="text-2xl font-bold italic text-white uppercase text-left">{metrics.gap > 2 ? "Déficit Inferior" : "Simetría Balanceada"}</p>
               <p className="text-xs text-slate-500 mt-2 font-medium text-left">
-                Diferencia Brazo/Pantorrilla: <span className="text-white">{metrics.gap}cm</span>. 
+                Diferencia Brazo/Pantorrilla: <span className="text-white">{metrics.gap}cm</span>.
                 {metrics.gap > 2 ? " Se requiere especialización en tren inferior." : " Ratios de extremidades en rango óptimo."}
               </p>
             </div>
@@ -215,7 +255,7 @@ useEffect(() => {
               </h3>
               <p className="text-2xl font-bold text-white uppercase italic tracking-tighter text-left">{metrics.status}</p>
               <p className="text-xs text-slate-500 mt-2 text-left">
-                {metrics.isMale 
+                {metrics.isMale
                   ? `Estás a ${(1.62 - metrics.mainRatio).toFixed(2)} puntos del Ratio Dorado Clásico.`
                   : `Tu balance cintura/cadera proyecta una estética ${metrics.mainRatio <= 0.72 ? "de élite" : "en desarrollo"}.`
                 }
@@ -226,14 +266,14 @@ useEffect(() => {
 
         {/* COLUMNA 2: NUTRICIÓN Y SESIÓN */}
         <motion.div className="space-y-8" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-          
+
           <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-6 rounded-[2.5rem] shadow-lg relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:rotate-12 transition-transform duration-500">
               {metrics.isMale ? <Scale size={80} /> : <Heart size={80} />}
             </div>
             <h2 className="text-white/80 text-sm font-bold uppercase tracking-wider italic text-left">Combustible Actual</h2>
             <p className="text-4xl font-black text-white mt-2 tracking-tighter text-left">{calories} <span className="text-lg font-medium opacity-60">kcal</span></p>
-            <p className="text-white/90 text-xs mt-3 font-mono font-bold text-left">P: {protein}G | C: {Math.round(calories*0.45/4)}G | G: {Math.round(calories*0.25/9)}G</p>
+            <p className="text-white/90 text-xs mt-3 font-mono font-bold text-left">P: {protein}G | C: {Math.round(calories * 0.45 / 4)}G | G: {Math.round(calories * 0.25 / 9)}G</p>
             <button className="mt-6 w-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md py-3 rounded-2xl text-white text-sm font-bold transition-all uppercase italic tracking-[0.2em]">
               Optimizar Dieta
             </button>

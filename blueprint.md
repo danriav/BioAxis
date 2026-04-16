@@ -43,12 +43,12 @@ CREATE TABLE user_profiles (
   biological_sex        TEXT CHECK (biological_sex IN ('male','female','other')),
   preferred_locale      TEXT DEFAULT 'es',       -- BCP-47: 'es', 'en', etc.
 
-  -- Anthropometry (all in metric SI units)
-  height_cm             NUMERIC(5,2),
-  weight_kg             NUMERIC(5,2),
-  body_fat_pct          NUMERIC(4,2),
+  -- Basic Anthropometry (all in metric SI units) - REQUIRED
+  height_cm             NUMERIC(5,2) NOT NULL,
+  weight_kg             NUMERIC(5,2) NOT NULL,
 
-  -- Limb proportions for biomechanical compensation
+  -- Limb proportions & specific metrics - OPTIONAL (Used for Aesthetic Ratios)
+  body_fat_pct          NUMERIC(4,2),
   femur_length_cm       NUMERIC(5,2),
   torso_length_cm       NUMERIC(5,2),
   arm_span_cm           NUMERIC(5,2),
@@ -88,10 +88,14 @@ CREATE TABLE muscle_groups (
 );
 
 -- ─────────────────────────────────────────
--- EXERCISES — Core catalog
+-- EXERCISES — Core catalog (Expanded)
+-- Categories: Strength, Abdomen, Cardio. Focus: Stretch vs Shortened Bias.
 -- ─────────────────────────────────────────
 CREATE TABLE exercises (
   id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  category              TEXT DEFAULT 'strength' CHECK (category IN ('strength','abdomen','cardio')),
+  muscle_section_focus  TEXT,                            -- e.g., 'upper_chest', 'lateral_deltoid'
+  biomechanical_bias    TEXT CHECK (biomechanical_bias IN ('stretch', 'shortened', 'mid-range')),
 
   -- Identity
   canonical_name        TEXT UNIQUE NOT NULL,   -- e.g. 'barbell_back_squat'

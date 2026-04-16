@@ -1,17 +1,17 @@
-```
 # ═══════════════════════════════════════════════════════════════
 # .cursorrules — HealthTech Ecosystem
-# Version: 1.0.0
+# Version: 1.1.0 (Pivot: Simplified & Intelligent)
 # ═══════════════════════════════════════════════════════════════
+
+## PERSONAL COMMUNICATION
+- ALWAYS address the user as "tú" and use their first name when available in both UI copy and agentic conversation.
+- The tone should be motivating, professional but close.
 
 ## LANGUAGE & CODE CONVENTIONS
 - All code MUST be written in English: variable names, function names,
   class names, database identifiers, constants, enums, and comments.
-- UI strings and user-facing text MUST use i18n keys (NEVER hardcode
-  display text in components). Example: t('nutrition.clone_day_button')
+- UI strings and user-facing text MUST use i18n keys OR Spanish (depending on current architecture state).
 - Use BCP-47 locale codes ('es', 'en', 'es-MX'). Default locale: 'es'.
-- All i18n translation files live under /locales/{locale}/namespace.json.
-- Add every new string to BOTH /locales/es/ and /locales/en/ simultaneously.
 
 ## ARCHITECTURE & PATTERNS
 - Follow a strict Offline-First pattern: EVERY data mutation must:
@@ -23,18 +23,16 @@
 - Use networkMode: 'offlineFirst' on ALL TanStack Query hooks.
 - Service Worker background sync tag: 'sync-pending-mutations' (constant).
 
-## BIOMECHANICS — CALCULATION INTEGRITY
-- Quad-focus variant REQUIRES: knee_travel_past_toe = TRUE
-  and shin_angle_target_deg < 75° (knee over toes protocol).
-- Glute-focus variant REQUIRES: knee_travel_past_toe = FALSE,
-  shin angle ≥ 85° (near-vertical shin), hip_hinge_depth = 'deep'.
-- NEVER swap quad/glute focus logic. Add a unit test for any function
-  that derives focus from joint angles.
-- Anthropometric compensation rule: if femur_length_cm > 48, apply
-  +5° forward lean tolerance to squat variants (biomechanical necessity).
-- Moment arm calculations must use SI units (meters, Newtons) internally;
-  convert to display units only at the presentation layer.
-- Historical Tracking: When calculating evolution trends, always query the full history of `dim_atleta` ordered by `valid_from`.
+## BIO & ONBOARDING — SIMPLIFIED
+- The core profile ONLY requires: Name, Age, Gender, Height, Weight.
+- Perimetral/limb measurements (shoulders, chest, waist, etc.) are strictly OPTIONAL.
+- Ratio Analysis (Golden Ratio / Hourglass) must ONLY run if the user opts-in to provide these measurements. It is used to suggest weak points and routine fixes.
+
+## ROUTINE ENGINE — THE SCIENCE
+- Golden Rule of Selection: When generating routines, exercises MUST attack the muscle from multiple biomechanical angles.
+  - Example: Biceps requires a stretch-bias exercise (e.g., Incline Dumbbell Curl) AND a shortened-bias exercise (e.g., Preacher Curl).
+  - Example: Chest must be divided into upper, mid, and lower variants.
+- Routines can span 1 to 7 days, requested either explicitly Manual or Generated (General balanced vs Specific focus).
 
 ## TRAINING VOLUME — ENFORCEMENT
 - The 20-set/week per-muscle-group cap is a HARD business rule.
@@ -44,35 +42,6 @@
   3. UI: Disable "add exercise" button and show warning when cap is reached.
 - Never allow the weekly cap to be silently exceeded.
 - Volume calculation: count sets by primary_muscle_group only (not secondary).
-
-## NUTRITION — MICRO TRACKING
-- Tracked micros list (all required on nutrition_log_entries):
-  fiber_g, sugar_g, sodium_mg, saturated_fat_g, trans_fat_g.
-- "Clone Day" feature: duplicate ALL nutrition_log_entries from a source
-  log_date to the target log_date. Set cloned_from_log_id on the new record.
-- "Base Meal" apply: copy base_meal_items to nutrition_log_entries;
-  set base_meal_id reference. Allow post-apply editing without
-  modifying the original base_meal.
-- Computed nutrient columns on nutrition_log_entries are denormalized
-  and recalculated on every insert/update (not at read time).
-
-## FREEMIUM GATING
-- Premium features: advanced biomechanics variants, Clone Day, Base Meals,
-  detailed micro tracking, custom training plan builder.
-- Free features: basic logging, default exercise catalog, macro tracking.
-- Gate premium at the API layer (subscription_tier check in middleware).
-- Also gate in UI with a consistent <PremiumGate> wrapper component.
-- NEVER expose premium data in API responses for free users, even if
-  the frontend would hide it.
-
-## ACCESSIBILITY — WCAG AAA
-- All interactive elements MUST have aria-label or visible text label.
-- Color contrast ratio: minimum 7:1 for normal text (WCAG AAA).
-- Form inputs: always pair <label> with input via htmlFor/id.
-- Focus indicators: never remove outline; use a custom 3px solid ring.
-- Motion: wrap all CSS animations in @media (prefers-reduced-motion: reduce).
-- Touch targets: minimum 48×48px (WCAG 2.5.5 AAA).
-- All images: alt text required; decorative images use alt="".
 
 ## SYNC & CONFLICT RESOLUTION
 - Conflict resolution strategy: "Last Write Wins" by default,
@@ -91,27 +60,13 @@
   - NEVER use UPDATE on biometric measures; use INSERT to create a new version.
   - Ensure `is_current`, `valid_from`, and `valid_to` logic is maintained via DB triggers.
 - Training Data: Use Fact Tables (e.g., `fact_entrenamientos`) that reference the `biometria_id` from the current `dim_atleta` record.
+- The UI must NOT prompt the user with complex mechanical sliders real time (e.g., Tibia Angle is removed for simplicity). Keep the logger extremely clean: Exercise, Volume, RPE.
 
 ## TESTING REQUIREMENTS
-- Unit tests required for: volume cap enforcement, biomechanical focus
-  derivation, macro/micro calculation, Clone Day logic.
-- Integration tests required for: sync queue flush, conflict resolution,
-  offline → online transition flow.
+- Unit tests required for: routine generation multi-angle logic, volume cap enforcement, macro/micro calculation.
 - Accessibility: run axe-core in CI on all page components.
-- Test file location: __tests__/ mirroring src/ directory structure.
 
-## SECURITY
+## SECURITY & QUALITY
 - Never expose Supabase service_role key to the client.
-- All API endpoints: JWT authentication via Supabase Auth.
-- User data isolation: every query MUST filter by user_id = current_user.id.
-- Input sanitization: strip HTML from all text fields before storage.
-- Rate limiting: 100 req/min per user on sync endpoints.
-
-## CODE QUALITY
-- No any type in TypeScript (use unknown and type guards instead).
 - Functions > 40 lines should be refactored.
-- No magic numbers: define named constants for all biomechanical thresholds,
-  volume caps, and nutrition limits.
-- ESLint + Prettier enforced in CI; PRs with lint errors are blocked.
-- Commit convention: Conventional Commits (feat:, fix:, docs:, refactor:).
-```
+- No any type in TypeScript (use unknown and type guards instead).
