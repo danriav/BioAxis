@@ -34,6 +34,7 @@
   +5° forward lean tolerance to squat variants (biomechanical necessity).
 - Moment arm calculations must use SI units (meters, Newtons) internally;
   convert to display units only at the presentation layer.
+- Historical Tracking: When calculating evolution trends, always query the full history of `dim_atleta` ordered by `valid_from`.
 
 ## TRAINING VOLUME — ENFORCEMENT
 - The 20-set/week per-muscle-group cap is a HARD business rule.
@@ -83,14 +84,13 @@
 - local_version: increment by 1 on every local mutation.
 - Never delete from syncQueue; mark as 'synced' or 'failed' for audit.
 
-## DATABASE & API
-- All timestamps: TIMESTAMPTZ (UTC). Never use plain TIMESTAMP.
-- Soft deletes ONLY: use deleted_at column, never hard DELETE.
-- All UUIDs: gen_random_uuid() (PostgreSQL) / crypto.randomUUID() (client).
-- FastAPI routes: use async/await throughout; no synchronous DB calls.
-- Pydantic models: explicit field validators for all business rules
-  (e.g., rep_range_min < rep_range_max, rir 0–4 range).
-- API versioning prefix: /api/v1/
+## DATABASE & API (KIMBALL & SCD2 EDITION)
+- Follow the Kimball Star Schema: distinguish between Dimensions (dim_*) and Facts (fact_*).
+- Biometric Data (weight, height, limbs, measures): ALWAYS use Type 2 Slowly Changing Dimension (SCD2).
+  - Use table `dim_atleta`.
+  - NEVER use UPDATE on biometric measures; use INSERT to create a new version.
+  - Ensure `is_current`, `valid_from`, and `valid_to` logic is maintained via DB triggers.
+- Training Data: Use Fact Tables (e.g., `fact_entrenamientos`) that reference the `biometria_id` from the current `dim_atleta` record.
 
 ## TESTING REQUIREMENTS
 - Unit tests required for: volume cap enforcement, biomechanical focus

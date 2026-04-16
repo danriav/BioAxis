@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { TestWorkoutButton } from "@/components/workout/test-workout-button";
 import { motion } from "framer-motion";
 import { 
   Activity, Zap, Target, ChevronRight, 
@@ -147,6 +148,9 @@ useEffect(() => {
           <span className="text-xs font-mono text-slate-400 uppercase tracking-tighter">Motor de Simetría: Kimball Activo</span>
         </div>
       </header>
+      <div className="max-w-7xl mx-auto mb-8 flex justify-end">
+   <TestWorkoutButton />
+  </div>
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
         
