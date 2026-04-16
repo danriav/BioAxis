@@ -1,36 +1,84 @@
 "use client";
 
+import { useEffect, useState } from 'react';
 import { 
   LineChart, Line, XAxis, YAxis, CartesianGrid, 
-  Tooltip, ResponsiveContainer, Legend, AreaChart, Area 
+  Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
-
-// He seleccionado hitos clave de tus datos para la gráfica
-const data = [
-  { fecha: '22/03', peso: 76, vtaper: 1.40, hombros: 116 },
-  { fecha: '18/07', peso: 78.1, vtaper: 1.51, hombros: 123 },
-  { fecha: '17/08', peso: 80, vtaper: 1.54, hombros: 125.5 },
-  { fecha: '21/09', peso: 83.3, vtaper: 1.56, hombros: 126.5 },
-  { fecha: '11/12', peso: 84.6, vtaper: 1.59, hombros: 129 },
-  { fecha: '27/03', peso: 84.3, vtaper: 1.59, hombros: 130 },
-];
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { Loader2 } from "lucide-react";
 
 export function EvolutionChart() {
+  const [evolutionData, setEvolutionData] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [currentRatio, setCurrentRatio] = useState("0.00");
+
+  useEffect(() => {
+    const fetchHistory = async () => {
+      const supabase = getSupabaseClient();
+      if (!supabase) return;
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // CONSULTA KIMBALL: Traemos toda la historia de la dimensión (SCD 2)
+      const { data, error } = await supabase
+        .from('dim_atleta')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('valid_from', { ascending: true });
+
+      if (data) {
+        // Formateamos los datos para la gráfica
+        const formatted = data.map(entry => {
+          const ratio = entry.genero === 'mujer' 
+            ? (entry.cintura / entry.cadera) 
+            : (entry.hombros / entry.cintura);
+          
+          return {
+            fecha: new Date(entry.valid_from).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
+            peso: entry.peso,
+            ratio: Number(ratio.toFixed(2)),
+            fullDate: entry.valid_from
+          };
+        });
+
+        setEvolutionData(formatted);
+        
+        // El último registro es el actual
+        if (formatted.length > 0) {
+          setCurrentRatio(formatted[formatted.length - 1].ratio.toFixed(2));
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchHistory();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="h-[400px] w-full bg-slate-900/40 backdrop-blur-md rounded-[3rem] border border-slate-800 flex items-center justify-center">
+        <Loader2 className="text-cyan-500 animate-spin" size={32} />
+      </div>
+    );
+  }
+
   return (
     <div className="h-[400px] w-full bg-slate-900/40 backdrop-blur-md rounded-[3rem] border border-slate-800 p-8 shadow-2xl">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h3 className="text-xl font-bold text-white tracking-tight italic uppercase">Análisis de Progreso Anual</h3>
-          <p className="text-xs text-slate-500 font-medium">Métricas: Masa Corporal vs. Estética (V-Taper)</p>
+          <h3 className="text-xl font-bold text-white tracking-tight italic uppercase">Evolución Biomecánica</h3>
+          <p className="text-xs text-slate-500 font-medium">Historial de Dimensión Atleta (SCD Tipo 2)</p>
         </div>
         <div className="text-right">
-          <span className="text-3xl font-black text-cyan-500 italic">1.59</span>
-          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Current V-Ratio</p>
+          <span className="text-3xl font-black text-cyan-500 italic">{currentRatio}</span>
+          <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Current Ratio</p>
         </div>
       </div>
 
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <LineChart data={evolutionData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
           <XAxis 
             dataKey="fecha" 
@@ -39,20 +87,20 @@ export function EvolutionChart() {
             tickLine={false} 
             axisLine={false} 
           />
-          {/* Eje Izquierdo para el Ratio V-Taper */}
+          {/* Ratio dinámico (V-Taper o Hourglass) */}
           <YAxis 
             yAxisId="left" 
-            domain={[1.3, 1.7]} 
+            domain={['dataMin - 0.1', 'dataMax + 0.1']} 
             stroke="#06b6d4" 
             fontSize={12} 
             axisLine={false} 
             tickLine={false} 
           />
-          {/* Eje Derecho para el Peso */}
+          {/* Peso */}
           <YAxis 
             yAxisId="right" 
             orientation="right" 
-            domain={[70, 90]} 
+            domain={['dataMin - 5', 'dataMax + 5']} 
             stroke="#818cf8" 
             fontSize={12} 
             axisLine={false} 
@@ -60,14 +108,15 @@ export function EvolutionChart() {
           />
           <Tooltip 
             contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '1.5rem', fontSize: '12px' }}
+            itemStyle={{ color: '#fff' }}
           />
           <Legend verticalAlign="top" align="right" iconType="circle" />
           
           <Line 
             yAxisId="left"
             type="monotone" 
-            dataKey="vtaper" 
-            name="V-Taper (H/C)" 
+            dataKey="ratio" 
+            name="Ratio Estético" 
             stroke="#06b6d4" 
             strokeWidth={4} 
             dot={{ r: 6, fill: '#06b6d4', strokeWidth: 2, stroke: '#0f172a' }} 

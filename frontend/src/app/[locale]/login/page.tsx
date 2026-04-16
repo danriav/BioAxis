@@ -1,19 +1,45 @@
 "use client";
 
+import { useState } from "react"; // Añadimos useState
 import { motion } from "framer-motion";
-import { ShieldCheck, Zap } from "lucide-react";
-import Link from "next/link"; // Importamos Link
-import { useLocale } from "next-intl"; // Importamos useLocale
+import { ShieldCheck, Zap, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
+import { getSupabaseClient } from "@/lib/supabase/client"; // Tu cliente Singleton
 
 export default function LoginPage() {
-  const locale = useLocale(); // Obtenemos el idioma actual (es o en)
+  const locale = useLocale();
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    // INTENTO DE LOGIN REAL
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      alert("Error: " + error.message);
+      setLoading(false);
+    } else {
+      // Si el login es exitoso, vamos al setup del perfil
+      router.push(`/${locale}/profile/setup`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 overflow-hidden relative">
-      {/* Decoración de fondo */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px]" />
-
+      
       <motion.div 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -27,34 +53,43 @@ export default function LoginPage() {
           <p className="text-slate-400 mt-2 text-sm font-medium italic">"Optimize your biological potential"</p>
         </div>
 
-        {/* Cambiamos el <form> por un div o simplemente manejamos el link si no hay validación real aún */}
-        <div className="space-y-6">
+        <form onSubmit={handleLogin} className="space-y-6">
           <div>
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">ID de Usuario</label>
             <input 
               type="email" 
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="nombre@bioaxis.com"
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 mt-2 text-white outline-none focus:border-cyan-500 transition-all placeholder:text-slate-700"
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 mt-2 text-white outline-none focus:border-cyan-500 transition-all"
             />
           </div>
           <div>
             <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Clave de Acceso</label>
             <input 
               type="password" 
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 mt-2 text-white outline-none focus:border-cyan-500 transition-all placeholder:text-slate-700"
+              className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 mt-2 text-white outline-none focus:border-cyan-500 transition-all"
             />
           </div>
 
-          {/* BOTÓN CON ENLACE REAL */}
-          <Link 
-            href={`/${locale}/profile/setup`}
-            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-4 rounded-2xl transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 group"
+          <button 
+            type="submit"
+            disabled={loading}
+            className="w-full bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-4 rounded-2xl transition-all shadow-lg shadow-cyan-500/20 flex items-center justify-center gap-2 group disabled:opacity-50"
           >
-            Iniciar Protocolo 
-            <ShieldCheck size={20} className="group-hover:rotate-12 transition-transform" />
-          </Link>
-        </div>
+            {loading ? <Loader2 className="animate-spin" /> : (
+              <>
+                Iniciar Protocolo 
+                <ShieldCheck size={20} className="group-hover:rotate-12 transition-transform" />
+              </>
+            )}
+          </button>
+        </form>
 
         <div className="mt-8 text-center text-sm">
           <span className="text-slate-500">¿Nuevo en la plataforma?</span>{" "}
