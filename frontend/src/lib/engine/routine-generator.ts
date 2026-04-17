@@ -1,8 +1,9 @@
+// lib/engine/routine-generator.ts
 import { MASTER_DATASET, DayTemplate, DatasetExercise } from './master-dataset';
 
 export type RoutineFocus = 'general' | 'chest' | 'back' | 'legs' | 'arms';
 
-// Interfaz del Catálogo DB expandido
+// 1. INTERFACES DEL MOTOR
 export interface CatalogExercise {
   id?: string;
   name_es: string;
@@ -13,7 +14,7 @@ export interface CatalogExercise {
   biomechanical_bias: 'stretch' | 'shortened' | 'mid-range';
   equipment_type: 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight';
   is_bilateral: boolean;
-  stability_type: 'high_external' | 'low_external'; // Nueva regla de Fatiga Sistémica
+  stability_type: 'high_external' | 'low_external';
 }
 
 export interface RoutineParams {
@@ -58,15 +59,16 @@ export interface GeneratedPlan {
   timeBudget: number;
 }
 
+// 2. CLASE DEL MOTOR DE ENTRENAMIENTO (SISTEMA EXPERTO)
 export class AITrainingEngine {
   
   private calculateExerciseTime(sets: number, restString: string): number {
     let rest = 2; // Default
     if (restString.includes('3')) rest = 3;
-    if (restString.includes('1.5') || restString.includes('1 minuto y 30')) rest = 1.5;
-    return sets * (1 + rest);
+    if (restString.includes('1.5') || restString.includes('1.5 minutos')) rest = 1.5;
+    return sets * (1.5 + rest); // 1.5 min por ejecución + descanso
   }
-  
+
   // Swap Manual del UI
   public swapExercise(currentEx: GeneratedExercise, catalog: CatalogExercise[]): GeneratedExercise {
     const candidates = catalog.filter(e => 
@@ -80,7 +82,7 @@ export class AITrainingEngine {
       const priority = candidates.find(c => c.equipment_type === 'dumbbell' || c.equipment_type === 'cable');
       chosen = priority || candidates[0];
     } else {
-      const fallback = catalog.filter(e => e.muscle_section_focus === currentEx.target_section && e.canonical_name !== currentEx.canonical_name);
+      const fallback = catalog.filter(e => e.muscle_group === currentEx.muscle && e.canonical_name !== currentEx.canonical_name);
       if (fallback.length > 0) chosen = fallback[0];
     }
 
@@ -90,17 +92,15 @@ export class AITrainingEngine {
       ...currentEx,
       name: chosen.name_es,
       canonical_name: chosen.canonical_name,
-      equipment_type: chosen.equipment_type,
-      stability_type: chosen.stability_type
-    } as GeneratedExercise;
+      stability_type: chosen.stability_type,
+      tension_type: chosen.biomechanical_bias
+    };
   }
 
-  // Auto-Swap de Seguridad para Sistema Central (SNC) y Tiempo Crítico
+  // Auto-Swap de Seguridad para Sistema Nervioso Central (SNC)
   private getStableAlternative(originalMatch: CatalogExercise, fullCatalog: CatalogExercise[]): CatalogExercise {
-    // Si ya es estable, retornamos
     if (originalMatch.stability_type === 'high_external') return originalMatch;
 
-    // Buscamos un sustituto 'high_external' con la misma física (ej. máquina o polea)
     const stableCandidates = fullCatalog.filter(e => 
       e.muscle_group === originalMatch.muscle_group &&
       e.muscle_section_focus === originalMatch.muscle_section_focus && 
@@ -108,120 +108,101 @@ export class AITrainingEngine {
       e.stability_type === 'high_external'
     );
 
-    if (stableCandidates.length > 0) {
-      return stableCandidates[0]; // Retorna la alternativa biológica idéntica pero guiada (ej. Hack en vez de Barbell)
-    }
-    
-    // Si la ciencia estricta falla, nos guiamos solo por el ángulo principal
-    const fallbackStable = fullCatalog.filter(e => 
-      e.muscle_group === originalMatch.muscle_group &&
-      e.stability_type === 'high_external'
-    );
-    
-    return fallbackStable.length > 0 ? fallbackStable[0] : originalMatch;
+    return stableCandidates.length > 0 ? stableCandidates[0] : originalMatch;
   }
 
+  // GENERADOR PRINCIPAL
   public generate(params: RoutineParams): GeneratedPlan {
     const timeBudget = params.timeBudgetMins || 60;
-    const effectiveTime = timeBudget - 15; 
+    const effectiveTime = timeBudget - 15; // Margen para calentamiento
     
     const genderKey = params.gender === 'mujer' ? 'female' : 'male';
     const baseTemplate: DayTemplate[] = MASTER_DATASET[genderKey][params.daysPerWeek] || MASTER_DATASET[genderKey][3]; 
     let workingPlan: DayTemplate[] = JSON.parse(JSON.stringify(baseTemplate));
 
-    let bioMsg = `IA Cronométrica: Empacando bloques en ${timeBudget}m (15m Calentamiento dinámico reservados).`;
+    let bioMsg = `Motor BioAxis: Perfilando para ${timeBudget}m.`;
     let mode: 'Standard' | 'Deload' | 'Aesthetic-Corrected' = 'Standard';
     let isBioDedicated = false;
 
-    // 1. Correcciones Biométricas
+    // --- REGLA DE ORO: CONTROL DE FRECUENCIA DE CORE ---
+    let coreDaysAdded = 0;
+    const MAX_CORE_PER_WEEK = 2; // Máximo 2 días de abdomen sin importar el tiempo
+
+    // 1. CORRECCIONES ESTÉTICAS (BIOMÉTRICAS)
     if (params.focus === 'general' && params.bioMetrics) {
       isBioDedicated = true;
-      const { genero, brazo, pantorrilla, hombros, cintura, cadera } = params.bioMetrics;
+      const { genero, hombros, cintura, cadera } = params.bioMetrics;
       const isMale = genero === 'hombre';
       
       if (isMale && hombros && cintura && (hombros / cintura) < 1.6) {
         mode = 'Aesthetic-Corrected';
-        bioMsg += " Ratio V-Taper bajo, sobrecargando deltoides.";
+        bioMsg += " 🎯 V-Taper bajo: Priorizando deltoides.";
         workingPlan.forEach(day => {
           day.exercises.forEach(ex => {
-            if (ex.muscle === 'Hombro lateral' || ex.name.toLowerCase().includes('lateral')) ex.sets += 1;
-            if (ex.name.toLowerCase().includes('gironda')) ex.sets += 1;
+            if (ex.muscle.includes('Hombro lateral')) ex.sets += 1;
           });
         });
-      } else if (!isMale && cintura && cadera && (cintura / cadera) > 0.75) {
+      } else if (!isMale && cintura && cadera && (cintura / cadera) > 0.72) {
         mode = 'Aesthetic-Corrected';
-        bioMsg += " Optimizando Ratio Reloj de Arena (sobrecarga glúteo).";
+        bioMsg += " 🎯 Optimizando Ratio Cintura/Cadera (Glúteo prioritario).";
         workingPlan.forEach(day => {
           day.exercises.forEach(ex => {
-            if (ex.name.toLowerCase().includes('hip thrust') || ex.muscle === 'Glúteo') ex.sets += 1;
+            if (ex.muscle === 'Glúteo' || ex.name.includes('Hip thrust')) ex.sets += 1;
           });
         });
       }
     }
 
-    // 2. Deload Defense (Fatiga Sistémica Activa)
+    // 2. DELOAD DEFENSE (SNC)
     if (params.recentHardLogs && params.recentHardLogs >= 5) {
       mode = 'Deload';
-      bioMsg += " 🚨 Fatiga SNC detectada: Aplicando -1 Set en todo y activando Protección de Estabilidad (Swap Máquinas).";
+      bioMsg += " 🚨 Fatiga SNC: Modo Descarga activo (-1 Set + Estabilidad Máxima).";
       workingPlan.forEach(day => {
         day.exercises.forEach(ex => {
           if (ex.sets > 1) ex.sets -= 1;
-          ex.rir = '3 - 4 (Descarga)';
+          ex.rir = '3 - 4';
         });
       });
     }
 
-    // La condición maestra de Auto-Swap Biomecánico
     const needsSystemicStability = timeBudget <= 45 || mode === 'Deload';
-    if(needsSystemicStability && !bioMsg.includes('Protección de Estabilidad')) {
-      bioMsg += " 🛡️ Modo Eficiencia: Intercambio a 'High External Stability' activo (Máquinas predominantes).";
-    }
 
-    // 3. Compilación Cronométrica
+    // 3. COMPILACIÓN DE RUTINA
     const finalPlan: GeneratedDay[] = workingPlan.map((day, dIdx) => {
       let dayTimeAccum = 0;
       let finalExs: GeneratedExercise[] = [];
       let orderCounter = 1;
 
+      // Verificamos si este día ya trae Core desde el Dataset (ej. el día 7 de abdomen)
+      const datasetHasCore = day.exercises.some(ex => ex.group === 'Core');
+      if (datasetHasCore) coreDaysAdded++;
+
       for (const masterEx of day.exercises) {
-        const potentialMatches = params.catalog.filter(c => masterEx.name.toLowerCase().includes(c.canonical_name.replace(/_/g, ' ')));
-        
-        let matchDef = potentialMatches.length > 0 ? potentialMatches[0] : null;
+        // Buscar el ejercicio en el catálogo de Supabase
+        let matchDef = params.catalog.find(c => 
+          masterEx.name.toLowerCase().includes(c.canonical_name.replace(/_/g, ' ')) ||
+          c.name_es.toLowerCase() === masterEx.name.toLowerCase()
+        );
 
-        // Fallback básico si el string no coincide perfecto pero pertenece al grupo muscular global 
-        // (Sirve por si el catalog tiene nombres un poco diferentes al dataset master)
         if (!matchDef) {
-           const genericMatches = params.catalog.filter(c => c.name_es.toLowerCase().includes(masterEx.name.toLowerCase()) || masterEx.name.toLowerCase().includes(c.name_es.toLowerCase()));
-           if(genericMatches.length > 0) matchDef = genericMatches[0];
-        }
-        
-        // Si no hay definición en catalog, construimos una estática genérica para no romper el front
-        if (!matchDef) {
-          matchDef = {
-             name_es: masterEx.name, canonical_name: 'custom_ex', category: 'strength', muscle_group: masterEx.muscle,
-             muscle_section_focus: 'general', biomechanical_bias: 'mid-range', equipment_type: 'dumbbell',
-             is_bilateral: true, stability_type: 'low_external'
-          };
+           // Fallback si no hay match perfecto
+           matchDef = {
+             name_es: masterEx.name, canonical_name: 'custom_ex', category: 'strength',
+             muscle_group: masterEx.muscle, muscle_section_focus: 'general',
+             biomechanical_bias: 'mid-range', equipment_type: 'machine',
+             is_bilateral: true, stability_type: 'high_external'
+           };
         }
 
-        // LÓGICA DE FATIGA Y EFICIENCIA (AUTO SWAP ESTABILIDAD)
+        // Aplicar Auto-Swap si necesitamos estabilidad (tiempo corto o deload)
         if (needsSystemicStability && matchDef.stability_type === 'low_external') {
            matchDef = this.getStableAlternative(matchDef, params.catalog);
         }
 
-        // AUTO-FILTRO BILATERAL
-        // Si el tiempo es corto, intentamos descartar de todos modos las unilaterales si encontramos bilateral para el mismo biomecánico
-        if (timeBudget <= 60 && !matchDef.is_bilateral) {
-           const bilatAlt = params.catalog.find(c => c.muscle_group === matchDef!.muscle_group && c.biomechanical_bias === matchDef!.biomechanical_bias && c.is_bilateral);
-           if(bilatAlt) matchDef = bilatAlt;
-        }
-
         const costMins = this.calculateExerciseTime(masterEx.sets, masterEx.rest);
         
-        // Si choca contra el muro de tiempo, dejamos de agregar
-        if (dayTimeAccum + costMins > effectiveTime + 5 && orderCounter > 3) {
-           break; 
-        }
+        // Si se acaba el tiempo, dejamos de añadir ejercicios
+        if (dayTimeAccum + costMins > effectiveTime + 5 && orderCounter > 3) break;
 
         dayTimeAccum += costMins;
 
@@ -240,31 +221,30 @@ export class AITrainingEngine {
           duration_mins: costMins
         });
 
-        if (orderCounter > 8) break; 
+        if (orderCounter > 9) break; 
       }
 
-      // SMART FILL: Si sobran más de 5 minutos, añadir bloque de Core o HIIT 
+      // --- SMART FILL REFINADO: REGLA ANTISATURACIÓN DE CORE ---
       const timeRemaining = effectiveTime - dayTimeAccum;
-      if (timeRemaining >= 5) {
-        const finisherTime = timeRemaining > 10 ? 10 : timeRemaining;
+      
+      if (timeRemaining >= 10 && coreDaysAdded < MAX_CORE_PER_WEEK && !datasetHasCore) {
         finalExs.push({
           order: orderCounter++,
-          name: "Core Burst Finisher (Crunches / L-Sits)",
+          name: "Abdominal Control (Enfoque en Estabilidad)",
           muscle: "Core",
           sets: 3,
           reps: "15-20",
           rir: "0",
           rest: "1 min",
-          canonical_name: "core_burst",
-          target_section: "abdomen",
+          canonical_name: "core_finisher",
+          target_section: "abs_general",
           tension_type: "shortened",
           stability_type: "bodyweight",
-          duration_mins: finisherTime
+          duration_mins: 10
         });
-        dayTimeAccum += finisherTime;
-        if (!bioMsg.includes('Finisher')) {
-           bioMsg += ` Integrado Finisher de Core/Endurance por margen de tiempo (+${finisherTime}m).`;
-        }
+        dayTimeAccum += 10;
+        coreDaysAdded++;
+        if (!bioMsg.includes('Core Finisher')) bioMsg += " + Core Finisher programado.";
       }
 
       return {
