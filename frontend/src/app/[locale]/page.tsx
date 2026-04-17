@@ -1,9 +1,6 @@
-import { OnboardingForm } from "@/components/profile/onboarding-form";
+import { redirect } from "next/navigation";
 
-export default function ProfileSetupPage() {
-  return (
-    <main className="min-h-screen bg-slate-950">
-      <OnboardingForm />
-    </main>
-  );
+export default function HomePage({ params: { locale } }: { params: { locale: string } }) {
+  // Redirige directamente al super-dashboard y nos saltamos el onboarding viejo
+  redirect(`/${locale}/dashboard`);
 }

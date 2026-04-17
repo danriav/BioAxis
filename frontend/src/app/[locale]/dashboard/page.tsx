@@ -1,14 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { WorkoutLogger } from "@/components/workout/workout-logger";
 import { EvolutionChart } from "@/components/dashboard/evolution-chart"; // Asegúrate de que esta ruta sea correcta
-import { TestWorkoutButton } from "@/components/workout/test-workout-button";
-import { MagicRoutineGenerator } from "@/components/workout/magic-routine-generator";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Activity, Zap, Target, ChevronRight,
-  ShieldCheck, Scale, Ruler, Star, Heart, Loader2
+  Activity, Zap, Target, 
+  ShieldCheck, Scale, Heart, Loader2
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
@@ -19,7 +16,6 @@ const glowStyle = "absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-60
 export default function ScientificDashboard() {
   const [userBio, setUserBio] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"bio_dedicado" | "arquitecto">("bio_dedicado");
   const [metrics, setMetrics] = useState({
     mainRatio: 0,
     label: "Calculando...",
@@ -34,9 +30,6 @@ export default function ScientificDashboard() {
       if (!supabase) return;
 
       try {
-        const pref = localStorage.getItem("bioaxis_training_preference");
-        if (pref === "arquitecto") setActiveTab("arquitecto");
-
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           setLoading(false);
@@ -132,43 +125,6 @@ export default function ScientificDashboard() {
           <span className="text-xs font-mono text-slate-400 uppercase tracking-tighter">Motor de Simetría: Kimball Activo</span>
         </div>
       </header>
-      
-      {/* TABS DE ENTRENAMIENTO */}
-      <div className="max-w-7xl mx-auto px-4 pb-4">
-        <div className="flex gap-4 border-b border-slate-800 pb-2">
-          <button
-            onClick={() => setActiveTab("bio_dedicado")}
-            className={`pb-2 px-2 text-sm font-black uppercase tracking-widest transition-all ${
-              activeTab === "bio_dedicado" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            Bio-Dedicado (IA)
-          </button>
-          <button
-            onClick={() => setActiveTab("arquitecto")}
-            className={`pb-2 px-2 text-sm font-black uppercase tracking-widest transition-all ${
-              activeTab === "arquitecto" ? "text-cyan-400 border-b-2 border-cyan-400" : "text-slate-500 hover:text-slate-300"
-            }`}
-          >
-            Arquitecto (Manual)
-          </button>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 py-4 mb-8">
-        <AnimatePresence mode="wait">
-          {activeTab === "bio_dedicado" && (
-            <motion.section key="bio" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-              <MagicRoutineGenerator />
-            </motion.section>
-          )}
-          {activeTab === "arquitecto" && (
-            <motion.section key="arq" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
-              <WorkoutLogger />
-            </motion.section>
-          )}
-        </AnimatePresence>
-      </div>
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
 
@@ -241,15 +197,6 @@ export default function ScientificDashboard() {
           </div>
         </motion.div>
       </main>
-    </div>
-  );
-}
-
-function ExerciseItem({ name, sets, highlight = false }: { name: string, sets: string, highlight?: boolean }) {
-  return (
-    <div className={`flex items-center justify-between p-3 rounded-2xl border transition-colors ${highlight ? 'bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.1)]' : 'bg-slate-950/40 border-slate-800/30'}`}>
-      <span className={`text-sm font-medium ${highlight ? 'text-cyan-400' : 'text-slate-300'}`}>{name}</span>
-      <span className={`text-xs font-mono font-bold ${highlight ? 'text-white' : 'text-cyan-500'}`}>{sets}</span>
     </div>
   );
 }
