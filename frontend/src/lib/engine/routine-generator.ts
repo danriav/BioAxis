@@ -3,14 +3,14 @@ import { MASTER_DATASET, DayTemplate, FrequencyDataset } from './master-dataset'
 
 export type RoutineFocus = 'general' | 'chest' | 'back' | 'legs' | 'arms';
 
-// 1. INTERFACES (Sincronizadas con tu Supabase)
+// 1. INTERFACES DE CONTRATO (Blindaje Total)
 export interface CatalogExercise {
   id?: string;
   name_es: string;
   canonical_name: string;
-  muscle_group?: string; // Opcional por seguridad
+  muscle_group?: string; 
   primary_muscle_group_id?: number | string; 
-  target_section: string; // Ej: 'chest_superior', 'glute_medius'
+  target_section: string; // 'glute_medius', 'shoulders_lateral', 'chest_superior', etc.
   tension_type: 'stretch' | 'shortened' | 'mid-range';
   equipment_type: 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight';
   is_bilateral: boolean;
@@ -68,7 +68,7 @@ export interface GeneratedPlan {
   timeBudget: number;
 }
 
-// 2. MOTOR BIOAXIS V8 (LOGIC ENGINE PRO)
+// 2. MOTOR BIOAXIS V10.2 (ESTÉTICA POR GÉNERO Y SEGURIDAD DE GRUPO)
 export class AITrainingEngine {
   
   private mapToGenerated(order: number, match: CatalogExercise): GeneratedExercise {
@@ -79,11 +79,11 @@ export class AITrainingEngine {
       sets: 3,
       reps: "10-12",
       rir: "1-2",
-      rest: match.is_bilateral ? "2 min" : "90 seg",
+      rest: match.is_bilateral ? "2 min" : "60-90 seg",
       canonical_name: match.canonical_name,
-      target_section: match.target_section,
-      tension_type: match.tension_type,
-      stability_type: match.stability_type,
+      target_section: match.target_section || 'general',
+      tension_type: match.tension_type || 'mid-range',
+      stability_type: match.stability_type || 'low_external',
       duration_mins: 10
     };
   }
@@ -91,7 +91,7 @@ export class AITrainingEngine {
   public generate(params: RoutineParams): GeneratedPlan {
     const timeBudget = params.timeBudgetMins || 60;
     
-    // --- REGLAS DE VOLUMEN ESTRICTO (TU CONTRATO) ---
+    // --- 1. CONTRATO DE VOLUMEN (4, 5, 6, 7 bloques) ---
     let targetCount = 6;
     if (timeBudget <= 30) targetCount = 4;
     else if (timeBudget <= 45) targetCount = 5;
@@ -101,25 +101,23 @@ export class AITrainingEngine {
     const genderKey = params.gender === 'mujer' ? 'female' : 'male';
     const baseTemplate = MASTER_DATASET[genderKey][params.daysPerWeek] || MASTER_DATASET[genderKey][3];
     
-    // --- LÓGICA DE PROPORCIÓN (GOLDEN / HOURGLASS) ---
-    const metrics = params.bioMetrics;
-    const hasEnoughMetrics = !!(metrics?.cintura && (metrics?.hombros || metrics?.cadera));
-    let ratioMsg = "Enfoque: Equilibrio Biomecánico.";
+    // --- 2. LÓGICA DE RATIO Y PRIORIDAD ESTÉTICA ---
+    const m = params.bioMetrics;
+    const hasEnoughMetrics = !!(m?.cintura && (m?.hombros || m?.cadera));
     let aestheticFocus: string[] = [];
+    let bioMsg = "Análisis BioAxis: Equilibrio Biomecánico.";
 
-    if (hasEnoughMetrics) {
-      if (params.gender === 'hombre') {
-        const vTaper = (metrics!.hombros || 0) / (metrics!.cintura || 1);
-        if (vTaper < 1.618) {
-          aestheticFocus = ['shoulders_lateral', 'back_width'];
-          ratioMsg = "Objetivo: V-Taper (Golden Ratio)";
-        }
-      } else {
-        const hourglass = (metrics!.hombros || 0) / (metrics!.cadera || 1);
-        if (hourglass < 0.9) {
-          aestheticFocus = ['glute_medius', 'shoulders_lateral'];
-          ratioMsg = "Objetivo: Hourglass (Curvas y Simetría)";
-        }
+    if (params.gender === 'hombre') {
+      aestheticFocus = ['shoulders_lateral', 'back_width', 'shoulders_front'];
+      if (hasEnoughMetrics) {
+        const vTaper = (m!.hombros || 0) / (m!.cintura || 1);
+        if (vTaper < 1.618) bioMsg = "Objetivo: Golden Ratio (V-Taper Masculino).";
+      }
+    } else {
+      aestheticFocus = ['glute_medius', 'glute_max', 'hamstrings', 'shoulders_lateral'];
+      if (hasEnoughMetrics) {
+        const hourglass = (m!.hombros || 0) / (m!.cadera || 1);
+        if (hourglass < 0.9) bioMsg = "Objetivo: Hourglass Ratio (Glúteo y Simetría).";
       }
     }
 
@@ -127,62 +125,91 @@ export class AITrainingEngine {
       const dLabel = (day.dayLabel || '').toLowerCase();
       let finalExs: GeneratedExercise[] = [];
 
-      // Muro de seguridad por día
-      let allowedPatterns: string[] = [];
-      if (dLabel.includes('empuje')) allowedPatterns = ['chest', 'shoulders', 'triceps'];
-      else if (dLabel.includes('tracción')) allowedPatterns = ['back', 'biceps', 'rear_delt'];
-      else if (dLabel.includes('pierna') || dLabel.includes('inferior')) allowedPatterns = ['quads', 'glute', 'hamstrings', 'calves', 'abs'];
-      else allowedPatterns = ['chest', 'back', 'shoulders', 'arms', 'quads'];
+      // --- 3. BLUEPRINT DE SEGURIDAD (Aislamiento por día) ---
+      let allowedSections: string[] = [];
+      let blueprint: string[] = [];
+
+      const isPush = dLabel.includes('empuje') || dLabel.includes('push');
+      const isPull = dLabel.includes('tracción') || dLabel.includes('pull');
+      const isLegs = dLabel.includes('pierna') || dLabel.includes('inferior') || dLabel.includes('legs');
+      const isUpper = dLabel.includes('superior') || dLabel.includes('torso') || dLabel.includes('upper');
+
+      if (isPush) {
+        allowedSections = ['chest', 'shoulders', 'triceps', 'pecho', 'hombro', 'tríceps'];
+        blueprint = ['chest_medial', 'chest_superior', 'shoulders_lateral', 'triceps', 'chest_medial', 'shoulders_front', 'triceps'];
+      } else if (isPull) {
+        allowedSections = ['back', 'biceps', 'rear_delt', 'espalda', 'bíceps', 'antebrazo', 'tracción'];
+        blueprint = ['back_width', 'back_thickness', 'rear_delt', 'biceps', 'back_width', 'biceps', 'biceps'];
+      } else if (isLegs) {
+        allowedSections = ['quads', 'glute', 'hamstrings', 'calves', 'abs', 'pierna', 'cuádriceps', 'femoral'];
+        blueprint = ['quads', 'glute_medius', 'hamstrings', 'glute_max', 'quads', 'calves', 'abs'];
+      } else if (isUpper) {
+        allowedSections = ['chest', 'back', 'shoulders', 'arms', 'pecho', 'espalda', 'hombro', 'bíceps', 'tríceps'];
+        blueprint = ['chest_medial', 'back_width', 'chest_superior', 'back_thickness', 'shoulders_lateral', 'biceps', 'triceps'];
+      } else {
+        allowedSections = ['chest', 'back', 'shoulders', 'arms', 'quads', 'glute', 'pierna'];
+        blueprint = ['chest', 'back', 'quads', 'shoulders', 'biceps', 'triceps', 'abs'];
+      }
+
+      // Función interna para validar que el ejercicio no "se escape" de su día
+      const isValidForDay = (c: CatalogExercise) => {
+        const section = (c.target_section || '').toLowerCase();
+        const group = (c.muscle_group || '').toLowerCase();
+        return allowedSections.some(s => section.includes(s) || group.includes(s));
+      };
 
       for (let i = 0; i < targetCount; i++) {
         let match: CatalogExercise | undefined;
+        const currentSlotGoal = blueprint[i] || 'general';
 
-        // PRIORIDAD 1: Corregir el Ratio (Solo en los últimos 2 slots)
-        if (aestheticFocus.length > 0 && i >= targetCount - 2) {
-          match = params.catalog.find(c => {
-            const section = (c.target_section || '').toLowerCase();
-            const group = (c.muscle_group || '').toLowerCase();
-            const notUsed = !finalExs.some(e => e.canonical_name === c.canonical_name);
-            const isTarget = aestheticFocus.some(f => section.includes(f));
-            const isDayCompatible = allowedPatterns.some(p => section.includes(p) || group.includes(p));
-            return notUsed && isTarget && isDayCompatible;
-          });
-        }
+        // PRIORIDAD 1: Especialización Estética (Solo si encaja en el día)
+        match = params.catalog.find(c => {
+          const section = (c.target_section || '').toLowerCase();
+          const notUsed = !finalExs.some(e => e.canonical_name === c.canonical_name);
+          const isAesthetic = aestheticFocus.some(f => section.includes(f));
+          return notUsed && isAesthetic && isValidForDay(c) && section.includes(currentSlotGoal);
+        });
 
-        // PRIORIDAD 2: Master Dataset (Si no se ha llenado el slot)
+        // PRIORIDAD 2: Master Dataset Match (Con validación de aduanas)
         if (!match && day.exercises[i]) {
-          const masterName = day.exercises[i].name.toLowerCase();
+          const masterName = (day.exercises[i].name || '').toLowerCase();
           match = params.catalog.find(c => {
-            const nameMatch = (c.canonical_name || '').toLowerCase().includes(masterName.replace(/ /g, '_')) || 
-                              (c.name_es || '').toLowerCase() === masterName;
+            const cName = (c.canonical_name || '').toLowerCase().replace(/_/g, ' ');
+            const nEs = (c.name_es || '').toLowerCase();
+            const isNameMatch = masterName.includes(cName) || nEs.includes(masterName);
             const notUsed = !finalExs.some(e => e.canonical_name === c.canonical_name);
-            return nameMatch && notUsed;
+            return isNameMatch && notUsed && isValidForDay(c);
           });
         }
 
-        // PRIORIDAD 3: Relleno Dinámico (Garantizar los 4, 5, 6 o 7 ejercicios)
+        // PRIORIDAD 3: Relleno por Blueprint dinámico
         if (!match) {
           match = params.catalog.find(c => {
             const section = (c.target_section || '').toLowerCase();
-            const group = (c.muscle_group || '').toLowerCase();
             const notUsed = !finalExs.some(e => e.canonical_name === c.canonical_name);
-            const isDayCompatible = allowedPatterns.some(p => section.includes(p) || group.includes(p));
-            
-            // Regla Unilateral para 90 min (Slot 7)
+            const isSlotMatch = section.includes(currentSlotGoal.split('_')[0]);
             const uniRule = (targetCount === 7 && i === 6) ? !c.is_bilateral : true;
-            
-            return notUsed && isDayCompatible && uniRule;
+
+            return notUsed && isValidForDay(c) && isSlotMatch && uniRule;
+          });
+        }
+
+        // PRIORIDAD 4: Rescate Final (Cualquier cosa del grupo correcto)
+        if (!match) {
+          match = params.catalog.find(c => {
+            const notUsed = !finalExs.some(e => e.canonical_name === c.canonical_name);
+            return notUsed && isValidForDay(c);
           });
         }
 
         if (match) finalExs.push(this.mapToGenerated(i + 1, match));
       }
 
-      // PROTOCOLO EXTRA: Pantorrilla por Biometría
-      if ((dLabel.includes('pierna') || dLabel.includes('inferior')) && (params.bioMetrics?.pantorrilla || 0) < 35) {
-        const hasCalves = finalExs.some(e => e.target_section.includes('calv'));
+      // --- 4. PROTOCOLO PANTORRILLA ---
+      if (isLegs && (params.bioMetrics?.pantorrilla || 0) < 36) {
+        const hasCalves = finalExs.some(e => e.target_section.includes('calv') || e.name.toLowerCase().includes('talón'));
         if (!hasCalves) {
-          const calfEx = params.catalog.find(c => c.target_section.includes('calv') || c.name_es.includes('Talón'));
+          const calfEx = params.catalog.find(c => (c.target_section || '').includes('calv') || (c.name_es || '').includes('Talón'));
           if (calfEx) finalExs.push(this.mapToGenerated(99, calfEx));
         }
       }
@@ -199,8 +226,8 @@ export class AITrainingEngine {
       metadata: params, 
       generatedPlan: finalPlan, 
       isBioDedicated: hasEnoughMetrics, 
-      bioMsg: ratioMsg, 
-      mode: hasEnoughMetrics ? 'Bio-Ratio-Optimization' : 'General-Hypertrophy', 
+      bioMsg, 
+      mode: `BioAxis-V10.2-${params.gender === 'mujer' ? 'Hourglass' : 'GoldenRatio'}`, 
       timeBudget 
     };
   }
