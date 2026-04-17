@@ -239,23 +239,6 @@ export default function ScientificDashboard() {
               Optimizar Dieta
             </button>
           </div>
-
-          <div className={cardStyle}>
-            <h2 className="font-bold mb-4 flex items-center justify-between text-white uppercase italic tracking-tight text-left">
-              Ajuste de Sesión
-              <span className="text-[10px] bg-cyan-500 text-slate-950 px-2 py-0.5 rounded-full font-black font-mono">
-                {metrics.gap > 3 ? "FIX_GAP" : "STRENGTH"}
-              </span>
-            </h2>
-            <div className="space-y-3">
-              <ExerciseItem name={metrics.isMale ? "Press Militar" : "Hombro Lateral"} sets="4 x 12" />
-              <ExerciseItem name={metrics.gap > 3 ? "Elevación Talón" : "Sentadilla Hack"} sets="4 x 15" highlight={metrics.gap > 3} />
-              <ExerciseItem name={metrics.isMale ? "Dominadas" : "Hip Thrust"} sets="3 x 10" />
-            </div>
-            <button className="mt-6 w-full flex items-center justify-center gap-2 bg-slate-950/50 border border-slate-800 py-3 rounded-2xl text-cyan-400 text-sm font-bold hover:border-cyan-500/50 transition-all uppercase italic tracking-widest">
-              Iniciar Entrenamiento <ChevronRight size={16} />
-            </button>
-          </div>
         </motion.div>
       </main>
     </div>
