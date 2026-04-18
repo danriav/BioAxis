@@ -17,8 +17,6 @@ export default function ScientificDashboard() {
   const [userBio, setUserBio] = useState<any>(null);
   const [hoveredData, setHoveredData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  
-  // 🟢 NUEVO ESTADO PARA EL NOMBRE
   const [userName, setUserName] = useState<string>("");
   
   const params = useParams();
@@ -31,19 +29,14 @@ export default function ScientificDashboard() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          
-          // 1. OBTENEMOS EL NOMBRE DEL PERFIL
           const { data: profile } = await supabase
             .from('user_profiles')
             .select('display_name')
             .eq('user_id', user.id)
             .single();
             
-          if (profile?.display_name) {
-            setUserName(profile.display_name);
-          }
+          if (profile?.display_name) setUserName(profile.display_name);
 
-          // 2. OBTENEMOS LA BIOMETRÍA (Como lo teníamos)
           const { data } = await supabase
             .from('dim_atleta')
             .select('*')
@@ -65,12 +58,15 @@ export default function ScientificDashboard() {
     </div>
   );
 
+  // Fuente de verdad dinámica para toda la página
   const active = hoveredData || {
     peso: userBio?.peso,
     hombros: userBio?.hombros,
     cintura: userBio?.cintura,
     cadera: userBio?.cadera,
     brazo: userBio?.brazo,
+    antebrazo: userBio?.antebrazo,
+    pierna: userBio?.pierna,
     pantorrilla: userBio?.pantorrilla,
     ratioSimetria: userBio ? Number((userBio.hombros / userBio.cadera).toFixed(2)) : 0,
     ratioCurvatura: userBio ? Number((userBio.cintura / userBio.cadera).toFixed(2)) : 0,
@@ -85,9 +81,9 @@ export default function ScientificDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10 font-sans">
       
+      {/* HEADER */}
       <header className="max-w-7xl mx-auto mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          {/* 🟢 TÍTULO PERSONALIZADO CON EL NOMBRE */}
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">
             {userName ? <span className="text-white">{userName}, </span> : ""}
             <span className="text-slate-300">
@@ -95,8 +91,7 @@ export default function ScientificDashboard() {
             </span>{" "}
             <span className="text-cyan-500">Bioaxis</span>
           </h1>
-          
-          <p className="text-slate-500 flex items-center gap-2 mt-1 font-bold text-[10px] uppercase tracking-widest">
+          <p className="text-slate-500 flex items-center gap-2 mt-1 font-bold text-[10px] uppercase tracking-widest text-left">
             <ShieldCheck size={14} className="text-cyan-500" />
             Viendo: {hoveredData ? `Punto Histórico (${active.fecha})` : "Registro Actual"} | {active.peso} kg
           </p>
@@ -115,12 +110,11 @@ export default function ScientificDashboard() {
               <div className="text-left">
                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Análisis Detallado</p>
                 <p className="text-[11px] font-bold text-white flex items-center gap-1 leading-none uppercase italic">
-                  Laboratorio de Perímetros <ChevronRight size={12} className="text-cyan-500" />
+                  Laboratorio <ChevronRight size={12} className="text-cyan-500" />
                 </p>
               </div>
             </motion.button>
           </Link>
-
           <div className="hidden md:flex bg-slate-900/80 border border-slate-800 px-4 py-3 rounded-2xl items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse shadow-[0_0_10px_#06b6d4]" />
             <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none">Biometría SCD2 Activa</span>
@@ -129,22 +123,30 @@ export default function ScientificDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        {/* COLUMNA IZQUIERDA Y CENTRAL (2/3) */}
         <div className="lg:col-span-2 space-y-8">
-          <EvolutionChart onHover={(data) => setHoveredData(data)} />
           
+          {/* 🛑 AQUÍ ESTÁ EL CAMBIO CLAVE: Enviamos 'active' para que el gráfico muestre los 3 datos adentro */}
+          <EvolutionChart 
+            onHover={(data) => setHoveredData(data)} 
+            activeData={active} 
+          />
+          
+          {/* RATIOS DE SIMETRÍA Y CURVATURA */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className={cardStyle}>
               <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-6 flex items-center gap-2">
                 <Target size={14} className="text-cyan-400" /> X-Frame Index
               </h3>
               <div className="flex items-center gap-4 mb-4">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-bold">ACTUAL</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Actual</span>
                   <span className="text-4xl font-black italic text-white">{active.ratioSimetria}</span>
                 </div>
                 <div className="h-10 w-[2px] bg-slate-800 mx-2" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-bold text-cyan-800">META</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] text-slate-500 font-bold text-cyan-800 uppercase">Meta</span>
                   <span className="text-4xl font-black italic text-cyan-500">{targetSimetria.toFixed(2)}</span>
                 </div>
               </div>
@@ -155,73 +157,104 @@ export default function ScientificDashboard() {
                 <Zap size={14} className="text-rose-400" /> Hourglass Ratio
               </h3>
               <div className="flex items-center gap-4 mb-4">
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-bold">ACTUAL</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] text-slate-500 font-bold uppercase">Actual</span>
                   <span className="text-4xl font-black italic text-white">{active.ratioCurvatura}</span>
                 </div>
                 <div className="h-10 w-[2px] bg-slate-800 mx-2" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] text-slate-500 font-bold text-rose-900">META</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] text-slate-500 font-bold text-rose-900 uppercase">Meta</span>
                   <span className="text-4xl font-black italic text-rose-500">{targetHourglass.toFixed(2)}</span>
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="bg-slate-900/20 border border-slate-800/50 p-10 rounded-[3.5rem] grid grid-cols-3 gap-8">
-            <div className="text-center">
-              <p className="text-[10px] text-slate-600 uppercase font-black tracking-widest mb-2">Hombros</p>
-              <p className="text-3xl font-black text-white">{active.hombros || "--"}<span className="text-sm ml-1 text-slate-600 font-bold">cm</span></p>
-            </div>
-            <div className="text-center border-x border-slate-800/50">
-              <p className="text-[10px] text-slate-600 uppercase font-black tracking-widest mb-2">Cintura</p>
-              <p className="text-3xl font-black text-white">{active.cintura || "--"}<span className="text-sm ml-1 text-slate-600 font-bold">cm</span></p>
-            </div>
-            <div className="text-center">
-              <p className="text-[10px] text-slate-600 uppercase font-black tracking-widest mb-2">Cadera</p>
-              <p className="text-3xl font-black text-white">{active.cadera || "--"}<span className="text-sm ml-1 text-slate-600 font-bold">cm</span></p>
-            </div>
-          </div>
         </div>
 
-        <div className="bg-cyan-500/10 border border-cyan-500/20 p-8 rounded-[3rem] relative overflow-hidden group">
-          <div className="absolute -right-4 -top-4 text-cyan-500/10 group-hover:scale-110 transition-transform duration-700">
-            <Activity size={120} />
-          </div>
-          
-          <div className="relative z-10">
-            <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">
-              ¿Hubo cambios hoy?
-            </h3>
-            <p className="text-xs text-slate-400 mb-6 max-w-[200px] font-medium leading-relaxed">
-              Registra tu peso o perímetros actuales para recalibrar tu progreso.
-            </p>
-            
-            <Link href={`/${locale}/dashboard/update`}>
-              <button className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
-                Actualizar Biometría <ArrowRight size={14} />
-              </button>
-            </Link>
-          </div>
-        </div>
-
+        {/* COLUMNA DERECHA (Side Panel) */}
         <div className="space-y-6">
-          <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-8 rounded-[3.5rem] shadow-xl relative overflow-hidden group">
+          
+          {/* ACTUALIZACIÓN SLIM */}
+          <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800 p-6 rounded-[2rem] relative overflow-hidden group hover:border-cyan-500/30 transition-all duration-500 shadow-xl">
+            <div className="absolute -right-2 -top-2 text-cyan-500/5 group-hover:scale-110 transition-transform duration-700 pointer-events-none">
+              <Activity size={80} />
+            </div>
+            <div className="relative z-10 flex flex-col items-start text-left">
+              <div className="flex items-center gap-2 mb-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                <h3 className="text-sm font-black text-white italic uppercase tracking-widest">¿Nuevos Datos?</h3>
+              </div>
+              <p className="text-[10px] text-slate-500 mb-4 font-medium leading-tight max-w-[180px]">
+                Registra tu peso o perímetros para recalibrar tu evolución.
+              </p>
+              <Link href={`/${locale}/dashboard/update`} className="w-full">
+                <motion.button 
+                  whileHover={{ x: 5 }}
+                  className="w-full bg-cyan-500/10 hover:bg-cyan-500 border border-cyan-500/20 hover:border-cyan-500 py-2.5 rounded-xl text-cyan-500 hover:text-slate-950 text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                >
+                  Actualizar Biometría <ArrowRight size={12} />
+                </motion.button>
+              </Link>
+            </div>
+          </div>
+
+          {/* NUTRICIÓN */}
+          <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-8 rounded-[3.5rem] shadow-xl relative overflow-hidden group text-left">
             <h2 className="text-white/70 text-[10px] font-black uppercase tracking-[0.2em] italic">Fuel Analysis</h2>
             <p className="text-5xl font-black text-white mt-4 tracking-tighter">
               {Math.round(active.peso * 33)} <span className="text-sm opacity-50 font-medium italic">kcal</span>
             </p>
-            <button className="mt-10 w-full py-5 bg-white text-slate-900 rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all">
+            <button className="mt-10 w-full py-5 bg-white text-slate-900 rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all hover:bg-cyan-50">
               Optimizar Macros <ArrowRight size={16} />
             </button>
           </div>
           
-          <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-[3rem]">
-            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Simetría de Extremidades</h4>
-            <div className="flex items-end justify-between">
-              <div>
-                <p className="text-xs text-slate-400 font-bold mb-1 uppercase italic">Diferencia B/P</p>
-                <p className="text-3xl font-black text-white italic">{gap}cm</p>
+          {/* SIMETRÍA */}
+{/* SIMETRÍA Y BALANCE DE EXTREMIDADES */}
+          <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-[3rem] shadow-lg text-left">
+            <div className="flex items-center justify-between mb-6">
+              <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Balance de Extremidades</h4>
+              <div className="p-2.5 bg-slate-800 rounded-xl text-cyan-500 border border-slate-700">
+                <Activity size={16} />
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              {/* Métrica 1: Brazo vs Pantorrilla */}
+              <div className="flex justify-between items-end border-b border-slate-800/50 pb-4">
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase italic">Brazo / Pantorrilla</p>
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-0.5">Diferencia ideal: 0cm</p>
+                </div>
+                <p className="text-2xl font-black text-white italic">
+                  {gap}<span className="text-[10px] ml-1 text-slate-600">cm</span>
+                </p>
+              </div>
+
+              {/* Métrica 2: Antebrazo vs Brazo */}
+              <div className="flex justify-between items-end border-b border-slate-800/50 pb-4">
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase italic">Antebrazo / Brazo</p>
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-0.5">Ratio ideal: ~0.80</p>
+                </div>
+                <p className="text-2xl font-black text-white italic">
+                  {active.brazo && active.antebrazo 
+                    ? (active.antebrazo / active.brazo).toFixed(2) 
+                    : "--"}
+                </p>
+              </div>
+
+              {/* Métrica 3: Pantorrilla vs Pierna */}
+              <div className="flex justify-between items-end">
+                <div>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase italic">Pantorrilla / Pierna</p>
+                  <p className="text-[9px] text-slate-500 uppercase tracking-widest mt-0.5">Ratio ideal: ~0.65</p>
+                </div>
+                <p className="text-2xl font-black text-white italic">
+                  {active.pierna && active.pantorrilla 
+                    ? (active.pantorrilla / active.pierna).toFixed(2) 
+                    : "--"}
+                </p>
               </div>
             </div>
           </div>
