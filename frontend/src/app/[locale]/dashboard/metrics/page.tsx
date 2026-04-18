@@ -15,7 +15,7 @@ export default function MetricsPage() {
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
           <div className="flex items-center gap-4 mb-2">
             <Link 
-              href="/dashboard" 
+              href="/es/dashboard" 
               className="p-2 bg-slate-900/80 border border-slate-800 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
             >
               <ArrowLeft size={16} />
