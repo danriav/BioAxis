@@ -46,25 +46,30 @@ export function MagicRoutineGenerator() {
     init();
   }, []);
 
-  const handleGenerate = async () => {
-    setIsGenerating(true);
-    await new Promise(r => setTimeout(r, 2000)); // Efecto de "pensado"
+  // Solo cambia la función handleGenerate dentro de tu componente:
 
-    const plan = engine.generate({
-      daysPerWeek: days as any,
-      focus: focus as RoutineFocus,
-      fitnessLevel: 'intermediate',
-      gender: userBio?.genero || 'hombre',
-      bioMetrics: userBio,
-      recentHardLogs: 0,
-      timeBudgetMins: timeBudget,
-      catalog: catalog
-    });
+const handleGenerate = async () => {
+  setIsGenerating(true);
+  await new Promise(r => setTimeout(r, 2000));
 
-    setRoutine(plan);
-    setIsGenerating(false);
-    setSelectedDayIdx(0); // Empezar siempre en el Día 1
-  };
+  // Extraemos la estatura de userBio (asumiendo que viene de dim_atleta)
+  const userHeight = userBio?.estatura || 160;
+
+  const plan = engine.generate({
+    daysPerWeek: days as any,
+    focus: focus as RoutineFocus,
+    fitnessLevel: 'intermediate',
+    gender: userBio?.genero || 'hombre',
+    bioMetrics: userBio,
+    height: userHeight, // <--- PASAMOS LA ESTATURA AQUÍ
+    timeBudgetMins: timeBudget,
+    catalog: catalog
+  });
+
+  setRoutine(plan);
+  setIsGenerating(false);
+  setSelectedDayIdx(0);
+};
 
   const resetRoutine = () => setRoutine(null);
 

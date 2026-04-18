@@ -1,201 +1,188 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EvolutionChart } from "@/components/dashboard/evolution-chart"; // Asegúrate de que esta ruta sea correcta
+import { EvolutionChart } from "@/components/dashboard/evolution-chart";
 import { motion } from "framer-motion";
-import {
-  Activity, Zap, Target, 
-  ShieldCheck, Scale, Heart, Loader2
+import { 
+  ShieldCheck, Target, Zap, ArrowRight, 
+  Loader2, Scale, Heart 
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
-// --- ESTILOS REUTILIZABLES ---
-const cardStyle = "bg-slate-900/40 backdrop-blur-md border border-slate-800 p-6 rounded-3xl shadow-xl hover:border-cyan-500/30 transition-all duration-500";
-const glowStyle = "absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-3xl opacity-0 group-hover:opacity-20 transition duration-500 blur";
+const cardStyle = "bg-slate-900/40 backdrop-blur-md border border-slate-800 p-8 rounded-[3rem] shadow-xl hover:border-cyan-500/30 transition-all duration-500";
 
 export default function ScientificDashboard() {
   const [userBio, setUserBio] = useState<any>(null);
+  const [hoveredData, setHoveredData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [metrics, setMetrics] = useState({
-    mainRatio: 0,
-    label: "Calculando...",
-    status: "Analizando...",
-    gap: 0,
-    isMale: true
-  });
 
   useEffect(() => {
     const fetchBioData = async () => {
       const supabase = getSupabaseClient();
       if (!supabase) return;
-
       try {
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-          setLoading(false);
-          return;
+        if (user) {
+          const { data } = await supabase
+            .from('dim_atleta')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false }) 
+            .limit(1);
+          if (data?.[0]) setUserBio(data[0]);
         }
-
-        // 1. OBTENER EL PERFIL MÁS RECIENTE (Solución de empates)
-        // Usamos created_at en lugar de valid_from para ignorar la basura de las pruebas rápidas
-        const { data: currentData, error: currentError } = await supabase
-          .from('dim_atleta')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false }) 
-          .limit(1);
-
-        const currentBio = (currentData && currentData.length > 0) ? currentData[0] : null;
-
-        // Si tenemos datos actuales, procesamos métricas para el encabezado
-        if (currentBio) {
-          setUserBio(currentBio);
-
-          const h = Number(currentBio.hombros) || 0;
-          const c = Number(currentBio.cintura) || 0;
-          const hip = Number(currentBio.cadera) || 0;
-          const b = Number(currentBio.brazo) || 0;
-          const p = Number(currentBio.pantorrilla) || 0;
-          const isMale = currentBio.genero === 'hombre';
-
-          let ratio = 0;
-          let label = "";
-          let status = "";
-
-          if (isMale) {
-            ratio = c > 0 ? Number((h / c).toFixed(2)) : 0;
-            label = "V-Taper Index";
-            status = ratio >= 1.61 ? "Estatus: Golden Ratio" : "Estatus: Nivel Avanzado";
-          } else {
-            ratio = hip > 0 ? Number((c / hip).toFixed(2)) : 0;
-            label = "Hourglass Ratio";
-            status = ratio <= 0.72 && ratio >= 0.68 ? "Estatus: Reloj de Arena Ideal" : "Estatus: Atleta Estética";
-          }
-
-          setMetrics({
-            mainRatio: ratio,
-            label,
-            status,
-            gap: Math.abs(b - p) || 0,
-            isMale
-          });
-        }
-
-      } catch (err) {
-        console.error("Error cargando el motor Bioaxis:", err);
-      } finally {
-        setLoading(false);
-      }
+      } catch (err) { console.error(err); } finally { setLoading(false); }
     };
-
     fetchBioData();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
-        <Loader2 className="text-cyan-500 animate-spin w-12 h-12" />
-        <p className="text-cyan-500 font-mono text-xs uppercase tracking-widest">Sincronizando con Kimball SCD2...</p>
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
+      <Loader2 className="text-cyan-500 animate-spin w-12 h-12" />
+      <p className="text-cyan-500 font-mono text-[10px] uppercase tracking-widest">Sincronizando Matriz...</p>
+    </div>
+  );
 
-  // Cálculos Nutricionales Dinámicos
-  const weight = userBio?.peso || 0;
-  const calories = weight ? Math.round(weight * 33) : 2500;
-  const protein = weight ? Math.round(weight * 2.2) : 150;
+  // Fuente de verdad dinámica: Prioriza el punto donde está el mouse
+  const active = hoveredData || {
+    peso: userBio?.peso,
+    hombros: userBio?.hombros,
+    cintura: userBio?.cintura,
+    cadera: userBio?.cadera,
+    brazo: userBio?.brazo,
+    pantorrilla: userBio?.pantorrilla,
+    ratioSimetria: userBio ? Number((userBio.hombros / userBio.cadera).toFixed(2)) : 0,
+    ratioCurvatura: userBio ? Number((userBio.cintura / userBio.cadera).toFixed(2)) : 0,
+    genero: userBio?.genero,
+    fecha: "Estado Actual"
+  };
+
+  const targetHourglass = 0.70;
+  const targetSimetria = 1.00;
+  const gap = Math.abs((active.brazo || 0) - (active.pantorrilla || 0)).toFixed(1);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10 font-sans">
-
-      {/* HEADER DINÁMICO */}
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10">
+      
+      {/* HEADER */}
       <header className="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent italic uppercase">
-            {metrics.isMale ? "Estructura Apex" : "Atleta Alpha"} <span className="text-cyan-500 underline decoration-cyan-500/20">Bioaxis</span>
+          <h1 className="text-3xl font-black italic uppercase tracking-tighter">
+            {active.genero === 'hombre' ? "Estructura Apex" : "Atleta Alpha"} <span className="text-cyan-500">Bioaxis</span>
           </h1>
-          <p className="text-slate-500 flex items-center gap-2 mt-1 font-medium">
-            <ShieldCheck size={16} className="text-cyan-500" />
-            ID: {userBio?.edad || "--"} años | {weight || "--"} kg | {userBio?.genero?.toUpperCase() || "S/D"}
+          <p className="text-slate-500 flex items-center gap-2 mt-1 font-bold text-[10px] uppercase tracking-widest">
+            <ShieldCheck size={14} className="text-cyan-500" />
+            Viendo: {hoveredData ? `Punto Histórico (${active.fecha})` : "Registro Actual"} | {active.peso} kg
           </p>
         </motion.div>
-
         <div className="bg-slate-900/80 border border-slate-800 px-4 py-2 rounded-2xl flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse shadow-[0_0_10px_#06b6d4]" />
-          <span className="text-xs font-mono text-slate-400 uppercase tracking-tighter">Motor de Simetría: Kimball Activo</span>
+          <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest">Biometría SCD2 Activa</span>
         </div>
       </header>
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-        {/* COLUMNA 1: EVOLUCIÓN Y GRÁFICAS */}
-        <motion.div className="lg:col-span-2 space-y-8" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+        
+        <div className="lg:col-span-2 space-y-8">
           
-          {/* EL GRAN DIVORCIO: Aquí inyectamos el componente EvolutionChart limpio */}
-          <div className="relative z-10">
-            <EvolutionChart />
-          </div>
+          {/* EL GRÁFICO (Controlador) */}
+          <EvolutionChart onHover={(data) => setHoveredData(data)} />
 
-          <div className={cardStyle + " relative group overflow-hidden"}>
-            <div className={glowStyle} />
-            <div className="grid grid-cols-3 gap-4 relative z-10">
-              <div className="text-center">
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Hombros</p>
-                <p className="text-lg font-black text-white">{userBio?.hombros || "--"}cm</p>
-              </div>
-              <div className="text-center border-x border-slate-800">
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Cintura</p>
-                <p className="text-lg font-black text-white">{userBio?.cintura || "--"}cm</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Cadera</p>
-                <p className="text-lg font-black text-white">{userBio?.cadera || "--"}cm</p>
-              </div>
-            </div>
-          </div>
-
-          {/* SIMETRÍA ADAPTATIVA POR GÉNERO */}
+          {/* TARJETAS DE COMPARATIVA */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className={cardStyle}>
-              <h3 className="text-slate-400 text-sm font-medium mb-4 flex items-center gap-2">
-                <Target size={16} className="text-cyan-400" /> Análisis de GAP
+              <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-6 flex items-center gap-2">
+                <Target size={14} className="text-cyan-400" /> X-Frame Index
               </h3>
-              <p className="text-2xl font-bold italic text-white uppercase text-left">{metrics.gap > 2 ? "Déficit Inferior" : "Simetría Balanceada"}</p>
-              <p className="text-xs text-slate-500 mt-2 font-medium text-left">
-                Diferencia Brazo/Pantorrilla: <span className="text-white">{metrics.gap}cm</span>.
-                {metrics.gap > 2 ? " Se requiere especialización en tren inferior." : " Ratios de extremidades en rango óptimo."}
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-bold">ACTUAL</span>
+                  <span className="text-4xl font-black italic text-white">{active.ratioSimetria}</span>
+                </div>
+                <div className="h-10 w-[2px] bg-slate-800 mx-2" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-bold text-cyan-800">META</span>
+                  <span className="text-4xl font-black italic text-cyan-500">{targetSimetria.toFixed(2)}</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {Math.abs(active.ratioSimetria - targetSimetria) < 0.05 ? "Simetría estructural perfecta." : "Déficit de amplitud detectado."}
               </p>
             </div>
+
             <div className={cardStyle}>
-              <h3 className="text-slate-400 text-sm font-medium mb-4 flex items-center gap-2">
-                <Zap size={16} className="text-amber-400" /> {metrics.label}
+              <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-6 flex items-center gap-2">
+                <Zap size={14} className="text-rose-400" /> Hourglass Ratio
               </h3>
-              <p className="text-2xl font-bold text-white uppercase italic tracking-tighter text-left">{metrics.status}</p>
-              <p className="text-xs text-slate-500 mt-2 text-left">
-                {metrics.isMale
-                  ? `Estás a ${(1.62 - metrics.mainRatio).toFixed(2)} puntos del Ratio Dorado Clásico.`
-                  : `Tu balance cintura/cadera proyecta una estética ${metrics.mainRatio <= 0.72 ? "de élite" : "en desarrollo"}.`
-                }
+              <div className="flex items-center gap-4 mb-4">
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-bold">ACTUAL</span>
+                  <span className="text-4xl font-black italic text-white">{active.ratioCurvatura}</span>
+                </div>
+                <div className="h-10 w-[2px] bg-slate-800 mx-2" />
+                <div className="flex flex-col">
+                  <span className="text-[10px] text-slate-500 font-bold text-rose-900">META</span>
+                  <span className="text-4xl font-black italic text-rose-500">{targetHourglass.toFixed(2)}</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400 font-medium">
+                Distancia al objetivo: {Math.abs(active.ratioCurvatura - targetHourglass).toFixed(2)} puntos.
               </p>
             </div>
           </div>
-        </motion.div>
 
-        {/* COLUMNA 2: NUTRICIÓN Y SESIÓN */}
-        <motion.div className="space-y-8" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-
-          <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-6 rounded-[2.5rem] shadow-lg relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:rotate-12 transition-transform duration-500">
-              {metrics.isMale ? <Scale size={80} /> : <Heart size={80} />}
+          {/* PERÍMETROS DINÁMICOS */}
+          <div className="bg-slate-900/20 border border-slate-800/50 p-10 rounded-[3.5rem] grid grid-cols-3 gap-8">
+            <div className="text-center">
+              <p className="text-[10px] text-slate-600 uppercase font-black tracking-widest mb-2">Hombros</p>
+              <p className="text-3xl font-black text-white">{active.hombros || "--"}<span className="text-sm ml-1 text-slate-600 font-bold">cm</span></p>
             </div>
-            <h2 className="text-white/80 text-sm font-bold uppercase tracking-wider italic text-left">Combustible Actual</h2>
-            <p className="text-4xl font-black text-white mt-2 tracking-tighter text-left">{calories} <span className="text-lg font-medium opacity-60">kcal</span></p>
-            <p className="text-white/90 text-xs mt-3 font-mono font-bold text-left">P: {protein}G | C: {Math.round(calories * 0.45 / 4)}G | G: {Math.round(calories * 0.25 / 9)}G</p>
-            <button className="mt-6 w-full bg-white/10 hover:bg-white/20 border border-white/20 backdrop-blur-md py-3 rounded-2xl text-white text-sm font-bold transition-all uppercase italic tracking-[0.2em]">
-              Optimizar Dieta
+            <div className="text-center border-x border-slate-800/50">
+              <p className="text-[10px] text-slate-600 uppercase font-black tracking-widest mb-2">Cintura</p>
+              <p className="text-3xl font-black text-white">{active.cintura || "--"}<span className="text-sm ml-1 text-slate-600 font-bold">cm</span></p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] text-slate-600 uppercase font-black tracking-widest mb-2">Cadera</p>
+              <p className="text-3xl font-black text-white">{active.cadera || "--"}<span className="text-sm ml-1 text-slate-600 font-bold">cm</span></p>
+            </div>
+          </div>
+        </div>
+
+        {/* COLUMNA DERECHA */}
+        <div className="space-y-6">
+          <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-8 rounded-[3.5rem] shadow-xl relative overflow-hidden group">
+            <h2 className="text-white/70 text-[10px] font-black uppercase tracking-[0.2em] italic">Fuel Analysis</h2>
+            <p className="text-5xl font-black text-white mt-4 tracking-tighter">
+              {Math.round(active.peso * 33)} <span className="text-sm opacity-50 font-medium italic">kcal</span>
+            </p>
+            <div className="mt-8 space-y-4">
+              <div className="flex justify-between text-[10px] font-bold text-white uppercase tracking-widest">
+                <span>Proteína Sugerida</span>
+                <span>{Math.round(active.peso * 2.2)}g</span>
+              </div>
+              <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <motion.div initial={{ width: 0 }} animate={{ width: "100%" }} className="h-full bg-white" />
+              </div>
+            </div>
+            <button className="mt-10 w-full py-5 bg-white text-slate-900 rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all">
+              Optimizar Macros <ArrowRight size={16} />
             </button>
           </div>
-        </motion.div>
+
+          <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-[3rem]">
+            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Simetría de Extremidades</h4>
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-xs text-slate-400 font-bold mb-1 uppercase italic">Diferencia B/P</p>
+                <p className="text-3xl font-black text-white italic">{gap}cm</p>
+              </div>
+              <div className={`p-3 rounded-2xl ${Number(gap) < 1 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-400'}`}>
+                {Number(gap) < 1 ? <ShieldCheck /> : <Zap />}
+              </div>
+            </div>
+          </div>
+        </div>
+
       </main>
     </div>
   );

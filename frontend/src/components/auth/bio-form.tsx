@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, Sparkles, Loader2 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { validateBiometrics } from "@/lib/utils/biometric-validator";
 
 export function BioForm() {
   const [step, setStep] = useState(0);
@@ -41,6 +42,14 @@ export function BioForm() {
   };
 
   const handleFinalize = async () => {
+    // --- 🛑 PROTOCOLO DE SINCERIDAD BIOMECÁNICA ---
+    const errorMsg = validateBiometrics(formData);
+    
+    if (errorMsg) {
+      alert(`⚠️ ERROR DE COHERENCIA: ${errorMsg}`);
+      return; // Bloqueamos el proceso antes de activar animaciones o Supabase
+    }
+
     setIsAnalyzing(true);
     const supabase = getSupabaseClient();
 
@@ -55,7 +64,7 @@ export function BioForm() {
         return;
       }
 
-      // Insertar en la Dimensión dim_atleta (SCD Tipo 2)
+      // 1. Insertar en la Dimensión dim_atleta (SCD Tipo 2)
       const { error: insertError } = await supabase
         .from("dim_atleta")
         .insert({
@@ -78,16 +87,20 @@ export function BioForm() {
 
       if (insertError) throw insertError;
 
-      // Actualizar el perfil del usuario con su nombre para trato personal
+      // 2. Actualizar el perfil del usuario
       await supabase
         .from("user_profiles")
         .update({ display_name: formData.nombre })
         .eq("user_id", user.id);
 
+      // Efecto de "Pensado" de la IA
       await new Promise((resolve) => setTimeout(resolve, 2000));
+      
+      // 3. Persistencia local y Navegación
       localStorage.removeItem("userBioProfile");
       localStorage.setItem("bioaxis_time_budget", formData.timeBudget);
       localStorage.setItem("bioaxis_training_preference", formData.preference);
+      
       router.push(`/${locale}/dashboard`);
 
     } catch (error: any) {
@@ -101,6 +114,7 @@ export function BioForm() {
 
   return (
     <div className="max-w-2xl mx-auto bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[3rem] shadow-2xl relative">
+      {/* Indicador de Progreso */}
       <div className="flex justify-between mb-8 px-4">
         {[0, 1, 2].map((i) => (
           <div 
@@ -116,7 +130,7 @@ export function BioForm() {
         {step === 0 && (
           <motion.div
             key="step0"
-            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: -20, x: -20 }}
+            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             className="space-y-6"
           >
             <header className="mb-8 text-left">
@@ -156,7 +170,7 @@ export function BioForm() {
               <button
                 type="button"
                 onClick={nextStep}
-                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:shadow-none uppercase tracking-widest"
+                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 py-4 rounded-2xl text-white font-bold flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all uppercase tracking-widest"
               >
                 EMPEZAR PERFIL <ArrowRight size={20} />
               </button>
@@ -167,7 +181,7 @@ export function BioForm() {
         {step === 1 && (
           <motion.div
             key="step1"
-            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: -20, x: -20 }}
+            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             className="space-y-6"
           >
             <header className="mb-8 text-left">
@@ -180,7 +194,7 @@ export function BioForm() {
             </header>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+              <div className="col-span-2 text-left">
                 <Input label="¿Cómo te llamas?" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="Tu nombre" type="text" />
               </div>
               
@@ -201,11 +215,17 @@ export function BioForm() {
                 >MUJER</button>
               </div>
 
-              <Input label="Edad" name="edad" value={formData.edad} onChange={handleChange} placeholder="Años" type="number" />
-              <Input label="Altura" name="altura" value={formData.altura} onChange={handleChange} placeholder="cm" type="number" />
-              <Input label="Peso Físico" name="peso" value={formData.peso} onChange={handleChange} placeholder="Kg" type="number" />
+              <div className="text-left">
+                <Input label="Edad" name="edad" value={formData.edad} onChange={handleChange} placeholder="Años" type="number" />
+              </div>
+              <div className="text-left">
+                <Input label="Altura" name="altura" value={formData.altura} onChange={handleChange} placeholder="cm" type="number" />
+              </div>
+              <div className="text-left col-span-2">
+                <Input label="Peso Físico" name="peso" value={formData.peso} onChange={handleChange} placeholder="Kg" type="number" />
+              </div>
               
-              <div className="col-span-2 mt-4">
+              <div className="col-span-2 mt-4 text-left">
                 <label className="text-[10px] uppercase font-black tracking-widest text-slate-500 mb-2 block">
                   Presupuesto de Tiempo (Diario)
                 </label>
@@ -242,7 +262,7 @@ export function BioForm() {
         {step === 2 && (
           <motion.div
             key="step2"
-            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: -20, x: -20 }}
+            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
             className="space-y-6"
           >
             <header className="mb-8 text-left flex flex-col items-start">
@@ -251,7 +271,7 @@ export function BioForm() {
               </div>
               <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Perímetros Estéticos (Opcional)</h2>
               <p className="text-slate-500 text-sm font-medium text-left mt-2 block">
-                {formData.nombre ? `${formData.nombre}, ingresar` : "Ingresar"} estas medidas nos ayudará a calcular tu Ratio Dorado y detectar puntos débiles en tu rutina. Si no las tienes a mano, ¡puedes saltar este paso y agregarlas después!
+                {formData.nombre ? `${formData.nombre}, ingresar` : "Ingresar"} estas medidas nos ayudará a calcular tus Ratios y detectar desbalances.
               </p>
             </header>
 
@@ -289,7 +309,7 @@ export function BioForm() {
                   onClick={handleFinalize}
                   className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 py-4 px-8 rounded-2xl text-white font-bold flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all uppercase tracking-widest text-xs"
                 >
-                  FINALIZAR PERFIL
+                  {isAnalyzing ? <Loader2 className="animate-spin" /> : "FINALIZAR PERFIL"}
                 </button>
               </div>
             </div>
@@ -297,6 +317,7 @@ export function BioForm() {
         )}
       </AnimatePresence>
 
+      {/* Pantalla de Carga/Análisis */}
       <AnimatePresence>
         {isAnalyzing && (
           <motion.div
@@ -328,7 +349,7 @@ function Input({ label, name, value, onChange, ...props }: any) {
         value={value}
         onChange={onChange}
         {...props}
-        className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-700 font-medium"
+        className="bg-slate-950/50 border border-slate-800 rounded-2xl p-4 text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all placeholder:text-slate-700 font-medium w-full"
       />
     </div>
   );

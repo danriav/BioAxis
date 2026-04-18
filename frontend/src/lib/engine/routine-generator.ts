@@ -1,124 +1,140 @@
 // lib/engine/routine-generator.ts
-import { MASTER_DATASET, DayTemplate } from './master-dataset';
+import { MASTER_DATASET } from './master-dataset';
+
+export type RoutineFocus = 'general' | 'chest' | 'back' | 'legs' | 'arms';
+
+export interface CatalogExercise {
+  id?: string;
+  name_es: string;
+  canonical_name: string;
+  muscle_group?: string; 
+  target_section: string; 
+  tension_type: 'stretch' | 'shortened' | 'mid-range';
+  equipment_type: 'barbell' | 'dumbbell' | 'machine' | 'cable' | 'bodyweight';
+  is_bilateral: boolean;
+  stability_type: 'high_external' | 'low_external';
+}
+
+export interface RoutineParams {
+  daysPerWeek: 3 | 4 | 5 | 6 | 7;
+  focus: RoutineFocus;
+  fitnessLevel: 'beginner' | 'intermediate' | 'advanced';
+  gender?: 'hombre' | 'mujer';
+  height?: number; 
+  bioMetrics?: any;
+  timeBudgetMins?: number;
+  catalog: CatalogExercise[];
+}
+
+export interface GeneratedExercise {
+  order: number;
+  name: string;
+  muscle: string;
+  sets: number;
+  reps: string;
+  rir: string;
+  rest: string;
+  canonical_name: string;
+  target_section: string;
+}
+
+export interface GeneratedDay {
+  dayNumber: number;
+  dayLabel: string;
+  exercises: GeneratedExercise[];
+  totalDayMins: number; // Sincronizado con tu UI
+}
+
+export interface GeneratedPlan {
+  metadata: RoutineParams;
+  generatedPlan: GeneratedDay[];
+  isBioDedicated: boolean;
+  bioMsg: string;
+  mode: string;
+}
 
 export class AITrainingEngine {
-  
-  public generate(params: any): any {
-    const { gender, bioMetrics, catalog, timeBudgetMins, daysPerWeek } = params;
-    const timeBudget = timeBudgetMins || 60;
-    
-    // 1. CONTRATO DE VOLUMEN (Basado en tus tablas)
-    let targetCount = 6;
-    if (timeBudget >= 85) targetCount = 7; 
-    else if (timeBudget <= 45) targetCount = 5;
+  private analyzeSymmetry(m: any, height: number, gender: string): { msg: string, penalize: string[] } {
+    if (!m?.cintura || !height) return { msg: "Análisis BioAxis: Equilibrio General.", penalize: [] };
+    const penalize: string[] = [];
+    let messages: string[] = [];
 
-    // 2. CÁLCULO DE DEFICIT ESTÉTICO (Hourglass Logic)
-    const m = bioMetrics;
-    const ratioSimetria = (m?.hombros || 0) / (m?.cadera || 1); // Meta 1.0
-    const ratioCurvatura = (m?.cintura || 0) / (m?.cadera || 1); // Meta 0.7
-    
-    // ¿Necesitamos ensanchar cadera o espalda?
-    const needsHipWidth = ratioSimetria > 1.05; 
-    const needsV_Taper = ratioCurvatura > 0.75;
+    if (m.biceps && m.pantorrilla) {
+      if (m.biceps / m.pantorrilla > 1.18) {
+        messages.push("Aviso: Desbalance superior (Johnny Bravo)");
+        penalize.push('biceps', 'triceps');
+      }
+    }
 
+    const waistHeightRatio = m.cintura / height;
+    if (waistHeightRatio > 0.54) { 
+      messages.push("Enfoque: Recomposición Corporal");
+      return { msg: messages.join(" | "), penalize: ['abs'] }; 
+    }
+
+    if (gender === 'mujer') {
+      if (m.hombros && (m.hombros / m.cintura < 1.15)) messages.push("Objetivo: X-Frame");
+      if (m.biceps && (m.biceps / height > 0.21)) {
+        messages.push("Hipertrofia de brazos avanzada");
+        penalize.push('biceps', 'triceps');
+      }
+    }
+
+    return { msg: messages.length > 0 ? messages.join(" | ") : "Estructura Óptima y Proporcionada", penalize };
+  }
+
+  public generate(params: RoutineParams): GeneratedPlan {
+    const height = params.height || 160;
+    const analysis = this.analyzeSymmetry(params.bioMetrics, height, params.gender || 'mujer');
+    let aestheticFocus = params.gender === 'mujer' ? ['glute_medius', 'glute_max', 'hamstrings', 'shoulders_lateral'] : ['shoulders_lateral', 'back_width'];
+    
+    aestheticFocus = aestheticFocus.filter(f => !analysis.penalize.includes(f));
     let globalUsedIds: string[] = [];
 
-    const finalPlan = [1, 2, 3, 4, 5].slice(0, daysPerWeek).map((dayNum) => {
-      let dayExs: any[] = [];
+    const finalPlan = [1, 2, 3, 4, 5].slice(0, params.daysPerWeek).map((dayNum) => {
+      let dayExs: GeneratedExercise[] = [];
       let blueprint: string[] = [];
       let dayLabel = "";
 
-      // 3. SELECCIÓN DE DÍA BASADO EN TU ESTRATEGIA DE 5 DÍAS
-      // Adaptamos la lógica de tu tabla de 5 días
-      if (dayNum === 1) { 
-        dayLabel = "Pierna (Cuádriceps/Glúteo Focus)";
-        blueprint = ['quads', 'glute_max', 'hamstrings', 'quads', 'glute_medius', 'calves', 'abs'];
-      } else if (dayNum === 2) {
-        dayLabel = "Empuje (Hombro/Pecho/Tríceps)";
-        blueprint = ['shoulders_front', 'shoulders_lateral', 'triceps', 'triceps', 'triceps', 'chest_superior', 'chest_medial'];
-      } else if (dayNum === 3) {
-        dayLabel = "Pierna (Cadena Posterior/Glúteo)";
-        blueprint = ['glute_max', 'quads', 'hamstrings', 'glute_medius', 'calves', 'adductores', 'abs'];
-      } else if (dayNum === 4) {
-        dayLabel = "Tracción (Espalda/Bíceps)";
-        blueprint = ['back_width', 'back_thickness', 'back_width', 'rear_delt', 'biceps', 'biceps', 'biceps'];
-      } else {
-        dayLabel = "Pierna (Enfoque Glúteo)";
-        blueprint = ['glute_max', 'hamstrings', 'quads', 'glute_medius', 'adductores', 'calves', 'abs'];
-      }
+      if (dayNum === 1) { dayLabel = "Pierna (Cuádriceps/Glúteo)"; blueprint = ['quads', 'glute_max', 'hamstrings', 'quads', 'glute_medius', 'calves', 'abs']; }
+      else if (dayNum === 2) { dayLabel = "Empuje (Tren Superior)"; blueprint = ['shoulders_lateral', 'chest_superior', 'triceps', 'shoulders_front', 'triceps', 'chest_medial', 'abs']; }
+      else if (dayNum === 3) { dayLabel = "Pierna (Isquios/Glúteo)"; blueprint = ['glute_max', 'hamstrings', 'glute_medius', 'quads', 'hamstrings', 'adductores', 'calves']; }
+      else if (dayNum === 4) { dayLabel = "Tracción (Tren Superior)"; blueprint = ['back_width', 'back_thickness', 'rear_delt', 'biceps', 'back_width', 'biceps', 'abs']; }
+      else { dayLabel = "Pierna (Enfoque Glúteo)"; blueprint = ['glute_max', 'quads', 'hamstrings', 'glute_medius', 'adductores', 'calves', 'abs']; }
 
-      // 4. BÚSQUEDA INTELIGENTE CON BIAS DE MÉTRICAS
-      for (let i = 0; i < targetCount; i++) {
+      const limit = (params.timeBudgetMins || 60) >= 85 ? 7 : 6;
+
+      for (let i = 0; i < limit; i++) {
         let slotGoal = blueprint[i];
-        
-        // AJUSTE DINÁMICO POR MÉTRICAS:
-        // Si falta cadera, reemplazamos un slot genérico por Glúteo Medio
-        if (needsHipWidth && slotGoal === 'abs' && i > 4) slotGoal = 'glute_medius';
-        // Si falta V-Taper, reemplazamos un slot de espalda por Back Width
-        if (needsV_Taper && slotGoal.includes('back')) slotGoal = 'back_width';
+        if (analysis.penalize.some(p => slotGoal.includes(p))) slotGoal = aestheticFocus[0] || 'back_width';
 
-        let match = catalog.find((c: any) => {
+        let match = params.catalog.find((c) => {
           const section = (c.target_section || '').toLowerCase();
-          const isNotUsed = !globalUsedIds.includes(c.id || c.canonical_name);
-          const isMatch = section.includes(slotGoal.split('_')[0]);
-          
-          // Validar que el ejercicio sea del grupo correcto del día
-          const isCorrectGroup = this.validateGroup(dayLabel, c);
-          
-          return isMatch && isNotUsed && isCorrectGroup;
+          return section.includes(slotGoal.split('_')[0]) && !globalUsedIds.includes(c.id || c.canonical_name) && this.validateGroup(dayLabel, c);
         });
-
-        // Fallback: Si ya se usaron todos los de esa sección, permitir repetir pero no en el mismo día
-        if (!match) {
-          match = catalog.find((c: any) => 
-            (c.target_section || '').toLowerCase().includes(slotGoal.split('_')[0]) && 
-            this.validateGroup(dayLabel, c) &&
-            !dayExs.some(e => e.canonical_name === c.canonical_name)
-          );
-        }
 
         if (match) {
           dayExs.push({
-            order: i + 1,
-            name: match.name_es,
-            muscle: match.target_section,
-            canonical_name: match.canonical_name,
-            sets: 3,
-            reps: this.getRepsForSection(slotGoal),
-            rest: match.is_bilateral ? "3 min" : "2 min",
-            rir: i < 3 ? "1-2" : "0" // Los primeros ejercicios más pesados, últimos al fallo
+            order: i + 1, name: match.name_es, muscle: match.target_section,
+            canonical_name: match.canonical_name, sets: 3, reps: i < 3 ? "6-8" : "10-12",
+            rir: i < 3 ? "2" : "0", rest: match.is_bilateral ? "3 min" : "2 min",
+            target_section: match.target_section
           });
           globalUsedIds.push(match.id || match.canonical_name);
         }
       }
 
-      return {
-        dayNumber: dayNum,
-        dayLabel: dayLabel,
-        exercises: dayExs
-      };
+      return { dayNumber: dayNum, dayLabel, exercises: dayExs, totalDayMins: 10 + (dayExs.length * 10) };
     });
 
-    return { 
-      metadata: params, 
-      generatedPlan: finalPlan,
-      bioMsg: needsHipWidth ? "Énfasis en Glúteo Medio para Hourglass" : "Equilibrio General",
-      mode: "BioAxis-Custom-V12"
-    };
+    return { metadata: params, generatedPlan: finalPlan, isBioDedicated: !!params.bioMetrics?.cintura, bioMsg: analysis.msg, mode: "BioAxis-V13" };
   }
 
-  private validateGroup(label: string, c: any): boolean {
-    const section = (c.target_section || '').toLowerCase();
-    const group = (c.muscle_group || '').toLowerCase();
-    if (label.includes("Pierna")) return ['quad', 'glute', 'hamstring', 'calv', 'abs', 'pierna', 'femoral', 'aductor', 'abductor'].some(s => section.includes(s) || group.includes(s));
-    if (label.includes("Empuje")) return ['chest', 'shoulder', 'tricep', 'pecho', 'hombro'].some(s => section.includes(s) || group.includes(s));
-    if (label.includes("Tracción")) return ['back', 'bicep', 'rear', 'espalda', 'bíceps', 'tracción'].some(s => section.includes(s) || group.includes(s));
+  private validateGroup(label: string, c: CatalogExercise): boolean {
+    const s = c.target_section.toLowerCase();
+    if (label.includes("Pierna")) return ['quad', 'glute', 'hamstring', 'calv', 'abs', 'aductor', 'abductor'].some(k => s.includes(k));
+    if (label.includes("Empuje")) return ['chest', 'shoulder', 'tricep'].some(k => s.includes(k));
+    if (label.includes("Tracción")) return ['back', 'bicep', 'rear'].some(k => s.includes(k));
     return true;
-  }
-
-  private getRepsForSection(section: string): string {
-    if (section.includes('quads') || section.includes('glute_max')) return "6-8";
-    if (section.includes('back') || section.includes('chest')) return "8-10";
-    return "10-13";
   }
 }
