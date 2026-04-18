@@ -5,7 +5,7 @@ import { EvolutionChart } from "@/components/dashboard/evolution-chart";
 import { motion } from "framer-motion";
 import { 
   ShieldCheck, Target, Zap, ArrowRight, 
-  Loader2, Scale, Heart, ChevronRight, BarChart3 
+  Loader2, ChevronRight, BarChart3, Activity 
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import Link from "next/link";
@@ -18,6 +18,9 @@ export default function ScientificDashboard() {
   const [hoveredData, setHoveredData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   
+  // 🟢 NUEVO ESTADO PARA EL NOMBRE
+  const [userName, setUserName] = useState<string>("");
+  
   const params = useParams();
   const locale = params?.locale || "es";
 
@@ -28,12 +31,26 @@ export default function ScientificDashboard() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
+          
+          // 1. OBTENEMOS EL NOMBRE DEL PERFIL
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('display_name')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (profile?.display_name) {
+            setUserName(profile.display_name);
+          }
+
+          // 2. OBTENEMOS LA BIOMETRÍA (Como lo teníamos)
           const { data } = await supabase
             .from('dim_atleta')
             .select('*')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false }) 
             .limit(1);
+            
           if (data?.[0]) setUserBio(data[0]);
         }
       } catch (err) { console.error(err); } finally { setLoading(false); }
@@ -68,12 +85,17 @@ export default function ScientificDashboard() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10 font-sans">
       
-      {/* HEADER DINÁMICO CON BOTÓN DE MÉTRICAS */}
       <header className="max-w-7xl mx-auto mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          {/* 🟢 TÍTULO PERSONALIZADO CON EL NOMBRE */}
           <h1 className="text-3xl font-black italic uppercase tracking-tighter">
-            {active.genero === 'hombre' ? "Estructura Apex" : "Atleta Alpha"} <span className="text-cyan-500">Bioaxis</span>
+            {userName ? <span className="text-white">{userName}, </span> : ""}
+            <span className="text-slate-300">
+              {active.genero === 'hombre' ? "Estructura Apex" : "Atleta Alpha"}
+            </span>{" "}
+            <span className="text-cyan-500">Bioaxis</span>
           </h1>
+          
           <p className="text-slate-500 flex items-center gap-2 mt-1 font-bold text-[10px] uppercase tracking-widest">
             <ShieldCheck size={14} className="text-cyan-500" />
             Viendo: {hoveredData ? `Punto Histórico (${active.fecha})` : "Registro Actual"} | {active.peso} kg
@@ -81,7 +103,6 @@ export default function ScientificDashboard() {
         </motion.div>
 
         <div className="flex flex-wrap items-center gap-4">
-          {/* BOTÓN AL LABORATORIO DE PERÍMETROS */}
           <Link href={`/${locale}/dashboard/metrics`}>
             <motion.button 
               whileHover={{ scale: 1.02 }}
@@ -108,13 +129,11 @@ export default function ScientificDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* ... Resto del código del Dashboard (Mismo que ya tienes) ... */}
         <div className="lg:col-span-2 space-y-8">
           <EvolutionChart onHover={(data) => setHoveredData(data)} />
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className={cardStyle}>
-              {/* Card X-Frame Index */}
               <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-6 flex items-center gap-2">
                 <Target size={14} className="text-cyan-400" /> X-Frame Index
               </h3>
@@ -132,7 +151,6 @@ export default function ScientificDashboard() {
             </div>
 
             <div className={cardStyle}>
-              {/* Card Hourglass Ratio */}
               <h3 className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-6 flex items-center gap-2">
                 <Zap size={14} className="text-rose-400" /> Hourglass Ratio
               </h3>
@@ -163,6 +181,27 @@ export default function ScientificDashboard() {
               <p className="text-[10px] text-slate-600 uppercase font-black tracking-widest mb-2">Cadera</p>
               <p className="text-3xl font-black text-white">{active.cadera || "--"}<span className="text-sm ml-1 text-slate-600 font-bold">cm</span></p>
             </div>
+          </div>
+        </div>
+
+        <div className="bg-cyan-500/10 border border-cyan-500/20 p-8 rounded-[3rem] relative overflow-hidden group">
+          <div className="absolute -right-4 -top-4 text-cyan-500/10 group-hover:scale-110 transition-transform duration-700">
+            <Activity size={120} />
+          </div>
+          
+          <div className="relative z-10">
+            <h3 className="text-xl font-black text-white italic uppercase tracking-tighter mb-2">
+              ¿Hubo cambios hoy?
+            </h3>
+            <p className="text-xs text-slate-400 mb-6 max-w-[200px] font-medium leading-relaxed">
+              Registra tu peso o perímetros actuales para recalibrar tu progreso.
+            </p>
+            
+            <Link href={`/${locale}/dashboard/update`}>
+              <button className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+                Actualizar Biometría <ArrowRight size={14} />
+              </button>
+            </Link>
           </div>
         </div>
 
