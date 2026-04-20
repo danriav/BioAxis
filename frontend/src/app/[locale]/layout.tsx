@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { QueryProvider } from "@/providers/query-provider";
 import { Sidebar } from "@/components/navigation/sidebar";
+// 🟢 IMPORTAMOS EL CHAT
+import { ChatWidget } from "@/components/chat/chat-widget"; 
 
 type LocaleLayoutProps = {
   children: React.ReactNode;
@@ -35,6 +37,9 @@ export default async function LocaleLayout({
               <main className="flex-1 overflow-y-auto">
                 {children}
               </main>
+              
+              {/* 🟢 EL CHAT WIDGET: Al estar aquí, aparecerá en todas las rutas */}
+              <ChatWidget />
             </div>
           </QueryProvider>
         </NextIntlClientProvider>
