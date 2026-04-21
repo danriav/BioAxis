@@ -73,3 +73,16 @@ input[type="number"] {
     scrollbar-width: none;     /* Firefox */
   }
 }
+
+.mask-fade-edges {
+  mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+/* Puedes ponerlo en un style tag dentro de tu componente o en globals.css */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
