@@ -35,3 +35,41 @@ input[type="number"] {
   appearance: textfield;
   -moz-appearance: textfield;
 }
+
+@layer utilities {
+  /* =========================================
+     SCROLLBAR VERTICAL PREMIUM (custom-scrollbar) 
+     ========================================= */
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px; /* En vertical usamos width en lugar de height */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent; /* Fondo transparente para que se funda con el menú */
+    margin-block: 155px; /* Deja un poco de margen arriba y abajo para que no choque con los bordes curvos */
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #1e293b; /* Color slate-800, sutil pero visible */
+    border-radius: 10px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #06b6d4; /* El toque mágico: cyan-500 al pasar el ratón */
+  }
+
+  /* Para Firefox */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: #1e293b transparent;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE y Edge */
+    scrollbar-width: none;     /* Firefox */
+  }
+}

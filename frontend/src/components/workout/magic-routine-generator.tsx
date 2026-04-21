@@ -109,10 +109,10 @@ const handleGenerate = async () => {
             <label className="text-[10px] uppercase font-black tracking-[0.2em] text-slate-500 flex items-center gap-2">
               <CalendarDays size={14} className="text-cyan-500" /> Frecuencia Semanal
             </label>
-            <div className="grid grid-cols-3 gap-3">
-              {[3, 4, 5].map(d => (
+            <div className="grid grid-cols-7 gap-3">
+              {[1, 2, 3, 4, 5, 6, 7].map(d => (
                 <button key={d} onClick={() => setDays(d as any)}
-                  className={`py-4 rounded-2xl text-sm font-black transition-all border ${days === d ? 'bg-white border-white text-slate-950' : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-600'}`}>
+                  className={`py-2 rounded-2xl text-xs font-black transition-all border ${days === d ? 'bg-white border-white text-slate-950' : 'bg-slate-950/50 border-slate-800 text-slate-400 hover:border-slate-600'}`}>
                   {d} DÍAS
                 </button>
               ))}
@@ -123,7 +123,7 @@ const handleGenerate = async () => {
             onClick={handleGenerate}
             className="w-full py-6 bg-cyan-500 rounded-[2rem] text-slate-950 font-black uppercase italic tracking-[0.2em] hover:bg-cyan-400 transition-all flex justify-center items-center gap-3 shadow-xl shadow-cyan-900/20 active:scale-95"
           >
-            <Sparkles size={20} /> Generar Rutina Biomecánica
+            <Sparkles size={20} /> Generar Rutina
           </button>
         </div>
       </motion.div>
