@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware # Fundamental para conectar con Next.js
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import date
 from typing import List, Optional
@@ -7,16 +7,20 @@ import os
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
-# Cargar variables de entorno
 load_dotenv()
 
 app = FastAPI(title="BioAxis Nutrition Engine")
 
 # --- 1. CONFIGURACIÓN DE SEGURIDAD (CORS) ---
-# Esto permite que tu Frontend (puerto 3000) hable con tu Backend (puerto 8000)
+# Añadimos 127.0.0.1 por si el navegador resuelve localhost de esa forma
+origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,8 +31,7 @@ url: str = os.environ.get("SUPABASE_URL")
 key: str = os.environ.get("SUPABASE_ANON_KEY")
 supabase: Client = create_client(url, key)
 
-# --- 3. MODELOS DE DATOS (DEFINICIÓN DE CLASES) ---
-# Definimos las clases AQUÍ ARRIBA para que las funciones de abajo las conozcan
+# --- 3. MODELOS DE DATOS ---
 class SyncRequest(BaseModel):
     user_id: str
     source_date: date
@@ -41,10 +44,11 @@ class MealLog(BaseModel):
     quantity_g: float
     target_date: date
 
-# --- 4. ENDPOINTS (RUTAS) ---
+# --- 4. ENDPOINTS ---
 
 @app.get("/nutrition/search")
 async def search_food(query: str):
+    print(f"🔍 Buscando en Bio-Base: {query}")
     result = supabase.table("catalog_foods") \
         .select("*") \
         .ilike("name_es", f"%{query}%") \
@@ -78,7 +82,7 @@ async def sync_nutrition_day(request: SyncRequest):
 
 @app.post("/nutrition/add-log")
 async def add_meal_log(log: MealLog):
-    print(f"🚀 Recibida petición para guardar: {log.food_id}") # Log para ver en terminal
+    print(f"🚀 Registrando Bio-Alimento: {log.food_id} ({log.quantity_g}g)")
     
     data = {
         "user_id": log.user_id,
@@ -88,18 +92,15 @@ async def add_meal_log(log: MealLog):
         "consumed_at": str(log.target_date)
     }
     
-    # Intentamos la inserción
     result = supabase.table("nutrition_logs").insert(data).execute()
     
-    # Verificamos si realmente se guardó algo
     if hasattr(result, 'data') and len(result.data) > 0:
         print("✅ Guardado con éxito en Supabase")
         return result.data[0]
     else:
-        print("❌ Error: Supabase no devolvió datos del insert")
+        print("❌ Error en la inserción")
         raise HTTPException(status_code=500, detail="Error al insertar en la base de datos")
 
 if __name__ == "__main__":
     import uvicorn
-    # Iniciamos el servidor en el puerto 8000
     uvicorn.run(app, host="0.0.0.0", port=8000)
