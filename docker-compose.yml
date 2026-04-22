@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app # Hot-reload: Cambias código y se actualiza solo
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env.local
+    volumes:
+      - ./frontend:/app # Hot-reload para el front
+      - /app/node_modules # No sobrescribir node_modules del contenedor
+    depends_on:
+      - backend
