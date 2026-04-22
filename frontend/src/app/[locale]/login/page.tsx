@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react"; // Añadimos useState
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { ShieldCheck, Zap, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
-import { getSupabaseClient } from "@/lib/supabase/client"; // Tu cliente Singleton
+// 1. CAMBIAMOS EL IMPORT: Usamos el mismo motor que el Dashboard
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function LoginPage() {
   const locale = useLocale();
@@ -14,14 +15,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // 2. INICIALIZAMOS EL CLIENTE SSR
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     
-    const supabase = getSupabaseClient();
-    if (!supabase) return;
-
-    // INTENTO DE LOGIN REAL
+    // 3. INTENTO DE LOGIN (Ahora guardará la cookie correctamente)
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -31,7 +35,7 @@ export default function LoginPage() {
       alert("Error: " + error.message);
       setLoading(false);
     } else {
-      // Si el login es exitoso, vamos al setup del perfil
+      // Éxito: Ahora las cookies de sesión están activas
       router.push(`/${locale}/profile/setup`);
     }
   };
