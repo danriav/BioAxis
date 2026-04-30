@@ -16,13 +16,15 @@ const cardStyle = "bg-slate-900/40 backdrop-blur-md border border-slate-800 p-8 
 export default function ScientificDashboard() {
   const [userBio, setUserBio] = useState<any>(null);
   const [hoveredData, setHoveredData] = useState<any>(null);
+  
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState<string>("");
+  const [bioTargets, setBioTargets] = useState<any>(null);
   
   const params = useParams();
   const locale = params?.locale || "es";
 
-  useEffect(() => {
+useEffect(() => {
     const fetchBioData = async () => {
       const supabase = getSupabaseClient();
       if (!supabase) return;
@@ -34,17 +36,24 @@ export default function ScientificDashboard() {
             .select('display_name')
             .eq('user_id', user.id)
             .single();
-            
           if (profile?.display_name) setUserName(profile.display_name);
 
           const { data } = await supabase
             .from('dim_atleta')
             .select('*')
             .eq('user_id', user.id)
+            .order('is_current', { ascending: false }) 
             .order('created_at', { ascending: false }) 
             .limit(1);
             
           if (data?.[0]) setUserBio(data[0]);
+
+          // 🟢 CAMBIO 1: Llamada al Bio-Motor de Python
+          const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_API_URL}/nutrition/targets/${user.id}`);
+          if (response.ok) {
+            const targets = await response.json();
+            setBioTargets(targets);
+          }
         }
       } catch (err) { console.error(err); } finally { setLoading(false); }
     };
@@ -60,22 +69,23 @@ export default function ScientificDashboard() {
 
   // Fuente de verdad dinámica para toda la página
   const active = hoveredData || {
-    peso: userBio?.peso,
-    hombros: userBio?.hombros,
-    cintura: userBio?.cintura,
-    cadera: userBio?.cadera,
-    brazo: userBio?.brazo,
-    antebrazo: userBio?.antebrazo,
-    pierna: userBio?.pierna,
-    pantorrilla: userBio?.pantorrilla,
-    ratioSimetria: userBio ? Number((userBio.hombros / userBio.cadera).toFixed(2)) : 0,
-    ratioCurvatura: userBio ? Number((userBio.cintura / userBio.cadera).toFixed(2)) : 0,
-    genero: userBio?.genero,
+    peso: userBio?.peso || 0,
+    hombros: userBio?.hombros || 0,
+    cintura: userBio?.cintura || 0,
+    cadera: userBio?.cadera || 0,
+    brazo: userBio?.brazo || 0,
+    antebrazo: userBio?.antebrazo || 0,
+    pierna: userBio?.pierna || 0,
+    pantorrilla: userBio?.pantorrilla || 0,
+    genero: userBio?.genero || '---',
+    objetivo: userBio?.objetivo_metabolico || '---',
     fecha: "Estado Actual"
   };
 
   const targetHourglass = 0.70;
   const targetSimetria = 1.00;
+  const currentRatioSimetria = active.cadera > 0 ? Number((active.hombros / active.cadera).toFixed(2)) : 0;
+  const currentRatioCurvatura = active.cadera > 0 ? Number((active.cintura / active.cadera).toFixed(2)) : 0;
   const gap = Math.abs((active.brazo || 0) - (active.pantorrilla || 0)).toFixed(1);
 
   return (
@@ -142,7 +152,7 @@ export default function ScientificDashboard() {
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex flex-col text-left">
                   <span className="text-[10px] text-slate-500 font-bold uppercase">Actual</span>
-                  <span className="text-4xl font-black italic text-white">{active.ratioSimetria}</span>
+                  <span className="text-4xl font-black italic text-white">{currentRatioSimetria}</span>
                 </div>
                 <div className="h-10 w-[2px] bg-slate-800 mx-2" />
                 <div className="flex flex-col text-left">
@@ -159,7 +169,7 @@ export default function ScientificDashboard() {
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex flex-col text-left">
                   <span className="text-[10px] text-slate-500 font-bold uppercase">Actual</span>
-                  <span className="text-4xl font-black italic text-white">{active.ratioCurvatura}</span>
+                  <span className="text-4xl font-black italic text-white">{currentRatioCurvatura}</span>
                 </div>
                 <div className="h-10 w-[2px] bg-slate-800 mx-2" />
                 <div className="flex flex-col text-left">
@@ -210,7 +220,6 @@ export default function ScientificDashboard() {
           </div>
           
           {/* SIMETRÍA */}
-{/* SIMETRÍA Y BALANCE DE EXTREMIDADES */}
           <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-[3rem] shadow-lg text-left">
             <div className="flex items-center justify-between mb-6">
               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Balance de Extremidades</h4>

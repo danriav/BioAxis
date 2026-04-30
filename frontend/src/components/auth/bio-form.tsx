@@ -1,9 +1,13 @@
+// src/components/auth/bio-form.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, Activity, Loader2, ShieldCheck } from "lucide-react";
+import { 
+  ArrowRight, Activity, Loader2, ShieldCheck, 
+  Flame, Scale, TrendingUp 
+} from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateBiometrics } from "@/lib/utils/biometric-validator";
 
@@ -14,6 +18,7 @@ export function BioForm() {
   const params = useParams();
   const locale = params?.locale || "es";
 
+  // 1. Añadimos los nuevos campos al estado inicial
   const [formData, setFormData] = useState({
     nombre: "",
     genero: "",
@@ -28,7 +33,9 @@ export function BioForm() {
     cadera: "",
     gluteo: "",
     pierna: "",
-    pantorrilla: ""
+    pantorrilla: "",
+    objetivo_metabolico: "mantenimiento", // Valor por defecto seguro
+    dias_entrenamiento: 4 // Promedio ideal por defecto
   });
 
   const nextStep = () => setStep((prev) => prev + 1);
@@ -39,7 +46,6 @@ export function BioForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 🧠 FUNCIÓN PARA CALCULAR LA EDAD EXACTA
   const calculateAge = (dob: string) => {
     if (!dob) return 0;
     const birthDate = new Date(dob);
@@ -52,8 +58,7 @@ export function BioForm() {
     return age;
   };
 
-  const handleFinalize = async () => {
-    // --- 🛑 PROTOCOLO DE SINCERIDAD ---
+const handleFinalize = async () => {
     const errorMsg = validateBiometrics(formData);
     
     if (errorMsg) {
@@ -74,9 +79,16 @@ export function BioForm() {
         return;
       }
 
-      // Calculamos la edad justo antes de enviar a la DB
       const edadCalculada = calculateAge(formData.fechaNacimiento);
 
+      // 1. Apagar perfiles anteriores (Historial Clínico Perfecto SCD2)
+      await supabase
+        .from("dim_atleta")
+        .update({ is_current: false, valid_to: new Date().toISOString() })
+        .eq("user_id", user.id)
+        .eq("is_current", true);
+
+      // 2. Insertar nuevo perfil como el único activo
       const { error: insertError } = await supabase
         .from("dim_atleta")
         .insert({
@@ -94,47 +106,44 @@ export function BioForm() {
           gluteo: parseFloat(formData.gluteo) || null,
           pierna: parseFloat(formData.pierna) || null,
           pantorrilla: parseFloat(formData.pantorrilla) || null,
+          objetivo_metabolico: formData.objetivo_metabolico,
+          dias_entrenamiento_semana: formData.dias_entrenamiento,
           is_current: true
         });
 
       if (insertError) throw insertError;
 
-      // 🛑 EL FIX: Upsert para garantizar el guardado del nombre
+      // 3. Guardar nombre en la sesión segura
       if (formData.nombre) {
-        const { error: profileError } = await supabase
-          .from("user_profiles")
-          .upsert({ 
-            user_id: user.id, 
-            display_name: formData.nombre 
-          }, { 
-            onConflict: 'user_id' 
-          });
-          
-        if (profileError) {
-          console.error("Error al guardar el nombre en el perfil:", profileError);
-        }
+        const { error: authUpdateError } = await supabase.auth.updateUser({
+          data: { display_name: formData.nombre }
+        });
+        if (authUpdateError) console.warn("Aviso:", authUpdateError.message);
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // 4. PROTOCOLO DE REDIRECCIÓN (La solución a tu pantalla de carga)
+      await new Promise((resolve) => setTimeout(resolve, 1500)); // Pausa para la UX
       localStorage.removeItem("userBioProfile");
-      router.push(`/${locale}/dashboard`);
+      
+      router.refresh(); // 💡 Forzamos a Next.js a limpiar la caché del servidor
+      router.push(`/${locale}/dashboard`); // 💡 Lanzamos al usuario al Dashboard
 
     } catch (error: any) {
       console.error(error);
       alert("Error al sincronizar biometría: " + error.message);
-      setIsAnalyzing(false);
+      setIsAnalyzing(false); // Apagamos el loader si hay error
     }
   };
 
-  // VALIDADORES DE PASOS
   const isStep1Valid = formData.nombre && formData.genero && formData.fechaNacimiento && formData.altura;
   const isStep2Valid = formData.peso && parseFloat(formData.peso) > 0; 
 
   return (
     <div className="max-w-2xl mx-auto bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[3rem] shadow-2xl relative">
       
+      {/* 3. Actualizamos la barra de progreso a 4 pasos (0, 1, 2, 3) */}
       <div className="flex justify-between mb-8 px-4">
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2, 3].map((i) => (
           <div 
             key={i} 
             className={`h-1.5 w-full mx-1 rounded-full transition-all duration-500 ${
@@ -176,7 +185,7 @@ export function BioForm() {
               </div>
               <div className="flex items-center gap-4">
                 <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-500 border border-cyan-500/30 flex items-center justify-center text-xs font-bold">3</div>
-                <p className="text-sm font-black text-cyan-500 uppercase tracking-widest italic">Sincronización Total</p>
+                <p className="text-sm font-black text-cyan-500 uppercase tracking-widest italic">Directriz Metabólica</p>
               </div>
             </div>
             
@@ -192,76 +201,37 @@ export function BioForm() {
           </motion.div>
         )}
 
-        {/* PASO 1: PERFIL BASE */}
+        {/* PASO 1: PERFIL BASE (Se mantiene igual) */}
         {step === 1 && (
-          <motion.div
-            key="step1"
-            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <header className="mb-8 text-left">
-              <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">
-                Estructura Base
-              </h2>
-              <p className="text-slate-500 text-sm font-medium mt-2">
-                Datos inmutables para el cálculo estructural.
-              </p>
+              <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Estructura Base</h2>
+              <p className="text-slate-500 text-sm font-medium mt-2">Datos inmutables para el cálculo estructural.</p>
             </header>
-
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 text-left">
                 <Input label="¿Cómo te llamas?" name="nombre" value={formData.nombre} onChange={handleChange} placeholder="Tu nombre" type="text" />
               </div>
-              
               <div className="col-span-2 flex gap-4 mt-2 mb-2">
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, genero: "hombre" })}
-                  className={`flex-1 py-4 rounded-2xl border font-bold transition-all uppercase tracking-widest text-sm ${
-                    formData.genero === "hombre" ? "border-cyan-500 bg-cyan-500/10 text-white" : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
-                  }`}
-                >Hombre</button>
-                <button
-                  type="button"
-                  onClick={() => setFormData({ ...formData, genero: "mujer" })}
-                  className={`flex-1 py-4 rounded-2xl border font-bold transition-all uppercase tracking-widest text-sm ${
-                    formData.genero === "mujer" ? "border-cyan-500 bg-cyan-500/10 text-white" : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"
-                  }`}
-                >Mujer</button>
+                <button type="button" onClick={() => setFormData({ ...formData, genero: "hombre" })} className={`flex-1 py-4 rounded-2xl border font-bold transition-all uppercase tracking-widest text-sm ${formData.genero === "hombre" ? "border-cyan-500 bg-cyan-500/10 text-white" : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"}`}>Hombre</button>
+                <button type="button" onClick={() => setFormData({ ...formData, genero: "mujer" })} className={`flex-1 py-4 rounded-2xl border font-bold transition-all uppercase tracking-widest text-sm ${formData.genero === "mujer" ? "border-cyan-500 bg-cyan-500/10 text-white" : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"}`}>Mujer</button>
               </div>
-
-              <div className="text-left col-span-1">
-                <Input label="Nacimiento" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} type="date" />
-              </div>
-              <div className="text-left col-span-1">
-                <Input label="Altura Física" name="altura" value={formData.altura} onChange={handleChange} placeholder="Ej: 175 cm" type="number" />
-              </div>
+              <div className="text-left col-span-1"><Input label="Nacimiento" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} type="date" /></div>
+              <div className="text-left col-span-1"><Input label="Altura Física" name="altura" value={formData.altura} onChange={handleChange} placeholder="Ej: 175 cm" type="number" /></div>
             </div>
-            
             <div className="mt-8 flex justify-end">
-              <button
-                type="button"
-                disabled={!isStep1Valid}
-                onClick={nextStep}
-                className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-[0.2em]"
-              >
-                Siguiente Fase <ArrowRight size={20} />
-              </button>
+              <button type="button" disabled={!isStep1Valid} onClick={nextStep} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-[0.2em]">Siguiente Fase <ArrowRight size={20} /></button>
             </div>
           </motion.div>
         )}
 
-        {/* PASO 2: MASA Y PERÍMETROS */}
+        {/* PASO 2: MASA Y PERÍMETROS (Actualizamos botones para ir al Paso 3) */}
         {step === 2 && (
-          <motion.div
-            key="step2"
-            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-            className="space-y-6"
-          >
+          <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <header className="mb-6 text-left flex flex-col items-start">
               <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Masa y Perímetros</h2>
               <p className="text-slate-500 text-sm font-medium text-left mt-2 block">
-                {formData.nombre ? `${formData.nombre}, el` : "El"} peso es <b className="text-cyan-500">obligatorio</b> para generar rutinas equilibradas. Las medidas musculares nos ayudan a detectar desbalances (opcionales) y a generar rutinas personalizadas.
+                {formData.nombre ? `${formData.nombre}, el` : "El"} peso es <b className="text-cyan-500">obligatorio</b> para generar rutinas equilibradas. Las medidas musculares nos ayudan a detectar desbalances (opcionales).
               </p>
             </header>
 
@@ -274,14 +244,8 @@ export function BioForm() {
             </div>
 
             <div className="relative">
-              <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                <div className="w-full border-t border-slate-800"></div>
-              </div>
-              <div className="relative flex justify-center">
-                <span className="bg-slate-900/50 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
-                  Perímetros Opcionales
-                </span>
-              </div>
+              <div className="absolute inset-0 flex items-center" aria-hidden="true"><div className="w-full border-t border-slate-800"></div></div>
+              <div className="relative flex justify-center"><span className="bg-slate-900/50 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Perímetros Opcionales</span></div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-left mt-6">
@@ -297,32 +261,82 @@ export function BioForm() {
             </div>
             
             <div className="flex flex-col-reverse md:flex-row justify-between mt-12 gap-4">
+              <button type="button" disabled={!isStep2Valid} onClick={nextStep} className="p-4 rounded-2xl text-slate-400 font-bold hover:text-white hover:bg-slate-800 transition-all text-xs uppercase tracking-widest disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400">Saltar Perímetros</button>
+              <div className="flex gap-4">
+                <button type="button" onClick={prevStep} className="p-4 rounded-2xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-all font-bold tracking-widest uppercase text-xs">Atrás</button>
+                <button type="button" disabled={!isStep2Valid} onClick={nextStep} className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 py-4 px-8 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-widest text-xs">Siguiente Fase <ArrowRight size={16}/></button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* 4. EL NUEVO PASO 3: DIRECTRIZ METABÓLICA */}
+        {step === 3 && (
+          <motion.div
+            key="step3"
+            initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+            className="space-y-8"
+          >
+            <header className="text-left flex flex-col items-start">
+              <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Directriz Metabólica</h2>
+              <p className="text-slate-500 text-sm font-medium text-left mt-2 block">
+                Define tu objetivo termodinámico actual. Esto ajustará tus macros y el volumen de entrenamiento en el Sintetizador Alpha.
+              </p>
+            </header>
+
+            {/* SELECCIÓN DE OBJETIVO */}
+            <div className="space-y-3">
+              <ObjectiveCard 
+                title="Oxidación Lipídica" subtitle="Déficit Calórico" icon={Flame} color="text-rose-500" bg="bg-rose-500"
+                selected={formData.objetivo_metabolico === 'deficit'}
+                onClick={() => setFormData({...formData, objetivo_metabolico: 'deficit'})}
+              />
+              <ObjectiveCard 
+                title="Recomposición" subtitle="Mantenimiento" icon={Scale} color="text-cyan-500" bg="bg-cyan-500"
+                selected={formData.objetivo_metabolico === 'mantenimiento'}
+                onClick={() => setFormData({...formData, objetivo_metabolico: 'mantenimiento'})}
+              />
+              <ObjectiveCard 
+                title="Síntesis Muscular" subtitle="Superávit Calórico" icon={TrendingUp} color="text-emerald-500" bg="bg-emerald-500"
+                selected={formData.objetivo_metabolico === 'superavit'}
+                onClick={() => setFormData({...formData, objetivo_metabolico: 'superavit'})}
+              />
+            </div>
+
+            {/* FRECUENCIA DE ENTRENAMIENTO */}
+            <div className="text-left">
+              <label className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em] ml-2 mb-3 block">
+                Frecuencia de Entrenamiento (Días x Semana)
+              </label>
+              <div className="flex gap-2 justify-between">
+                {[1, 2, 3, 4, 5, 6, 7].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setFormData({...formData, dias_entrenamiento: d})}
+                    className={`flex-1 py-4 rounded-[1rem] font-black text-lg transition-all ${
+                      formData.dias_entrenamiento === d 
+                        ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.4)]' 
+                        : 'bg-slate-900/50 text-slate-500 border border-slate-800 hover:border-cyan-500/30 hover:text-white'
+                    }`}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-between mt-12 gap-4">
+              <button type="button" onClick={prevStep} className="p-4 rounded-2xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-all font-bold tracking-widest uppercase text-xs">
+                Atrás
+              </button>
               <button
                 type="button"
-                disabled={!isStep2Valid}
                 onClick={handleFinalize}
-                className="p-4 rounded-2xl text-slate-400 font-bold hover:text-white hover:bg-slate-800 transition-all text-xs uppercase tracking-widest disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 py-4 px-8 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-widest text-xs"
               >
-                Saltar Perímetros
+                {isAnalyzing ? <Loader2 className="animate-spin" /> : "Sincronizar Ecosistema"}
               </button>
-              
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={prevStep}
-                  className="p-4 rounded-2xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-all font-bold tracking-widest uppercase text-xs"
-                >
-                  Atrás
-                </button>
-                <button
-                  type="button"
-                  disabled={!isStep2Valid}
-                  onClick={handleFinalize}
-                  className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 py-4 px-8 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-widest text-xs"
-                >
-                  {isAnalyzing ? <Loader2 className="animate-spin" /> : "FINALIZAR PERFIL"}
-                </button>
-              </div>
             </div>
           </motion.div>
         )}
@@ -339,7 +353,7 @@ export function BioForm() {
               <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter mb-4">
                 Generando Ecosistema Alpha
               </h2>
-              <p className="text-cyan-500 font-mono text-xs tracking-[0.2em] uppercase">Sincronizando biometría y calibres...</p>
+              <p className="text-cyan-500 font-mono text-xs tracking-[0.2em] uppercase">Sincronizando directriz metabólica...</p>
             </div>
           </motion.div>
         )}
@@ -348,6 +362,7 @@ export function BioForm() {
   );
 }
 
+// Subcomponente reutilizable para los Inputs
 function Input({ label, name, value, onChange, type, ...props }: any) {
   return (
     <div className="flex flex-col gap-2 group text-left">
@@ -364,5 +379,28 @@ function Input({ label, name, value, onChange, type, ...props }: any) {
         style={type === 'date' ? { colorScheme: 'dark' } : {}} 
       />
     </div>
+  );
+}
+
+// Subcomponente para las tarjetas de Objetivo
+function ObjectiveCard({ title, subtitle, icon: Icon, selected, onClick, color, bg }: any) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full flex items-center gap-4 p-5 rounded-[1.5rem] border transition-all text-left ${
+        selected 
+          ? `bg-slate-900 border-cyan-500 shadow-[0_0_20px_rgba(6,182,212,0.15)]` 
+          : `bg-slate-950/40 border-slate-800 hover:border-slate-700`
+      }`}
+    >
+      <div className={`p-3 rounded-xl ${selected ? `${bg}/10 ${color}` : 'bg-slate-900 text-slate-500'}`}>
+        <Icon size={24} />
+      </div>
+      <div>
+        <h4 className={`font-black italic uppercase tracking-wide ${selected ? 'text-white' : 'text-slate-400'}`}>{title}</h4>
+        <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${selected ? color : 'text-slate-600'}`}>{subtitle}</p>
+      </div>
+    </button>
   );
 }

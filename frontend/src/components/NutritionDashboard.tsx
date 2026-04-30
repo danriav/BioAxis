@@ -57,10 +57,31 @@ export function NutritionDashboard() {
     }
   }, [selectedDate, supabase]);
 
-  // Ejecutar carga inicial y cada vez que cambie la fecha
+// 1. Añadimos el estado para las metas reales
+  const [bioTargets, setBioTargets] = useState({ kcal: 0, protein: 0, carbs: 0, fat: 0 });
+
+  // 2. Función para consultar a FastAPI
+  const fetchBioTargets = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      try {
+        // Hacemos ping al Bio-Motor en Python
+        const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_API_URL}/nutrition/targets/${user.id}`);
+        if (response.ok) {
+          const targets = await response.json();
+          setBioTargets(targets);
+        }
+      } catch (error) {
+        console.error("Error al sincronizar termodinámica:", error);
+      }
+    }
+  }, [supabase]);
+
+  // Asegúrate de llamarla en tu useEffect inicial
   useEffect(() => {
     fetchDailyLogs();
-  }, [fetchDailyLogs]);
+    fetchBioTargets(); // <-- Añadir aquí
+  }, [fetchDailyLogs, fetchBioTargets]);
 
   const handleAddNewSlot = () => {
     const newSlotName = `Sesión ${slots.length + 1}`;
@@ -152,11 +173,31 @@ export function NutritionDashboard() {
 
       {/* SECCIÓN 2: MACROS GLOBALES */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        {/* Aquí van tus MacroCards actuales */}
-        <MacroCard label="Calorías" value={Math.round(totals.kcal)} target="2100" color="bg-cyan-500" icon={<Zap size={14}/>} />
-        <MacroCard label="Proteína" value={`${Math.round(totals.prot)}g`} target="160g" color="bg-magenta-500" />
-        <MacroCard label="Carbos" value={`${Math.round(totals.carb)}g`} target="220g" color="bg-blue-500" />
-        <MacroCard label="Grasas" value={`${Math.round(totals.fat)}g`} target="70g" color="bg-slate-400" />
+        <MacroCard 
+          label="Calorías" 
+          value={Math.round(totals.kcal)} 
+          target={bioTargets.kcal}
+          color="bg-cyan-500" 
+          icon={<Zap size={14}/>} 
+        />
+        <MacroCard 
+          label="Proteína" 
+          value={`${Math.round(totals.prot)}g`} 
+          target={`${bioTargets.protein}g`}
+          color="bg-magenta-500" 
+        />
+        <MacroCard 
+          label="Carbos" 
+          value={`${Math.round(totals.carb)}g`} 
+          target={`${bioTargets.carbs}g`}
+          color="bg-blue-500" 
+        />
+        <MacroCard 
+          label="Grasas" 
+          value={`${Math.round(totals.fat)}g`} 
+          target={`${bioTargets.fat}g`}
+          color="bg-slate-400" 
+        />
       </section>
 
       {/* SECCIÓN 3: SLOTS DE COMIDA EN GRID */}

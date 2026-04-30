@@ -72,15 +72,28 @@ export function MagicRoutineGenerator() {
 
   const engine = new AITrainingEngine();
 
-  useEffect(() => {
+useEffect(() => {
     const init = async () => {
       const supabase = getSupabaseClient();
       if (!supabase) return;
 
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        const { data } = await supabase.from('dim_atleta').select('*').eq('user_id', user.id).eq('is_current', true).maybeSingle();
-        if (data) setUserBio(data);
+        const { data } = await supabase
+          .from('dim_atleta')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_current', true)
+          .maybeSingle();
+          
+        if (data) {
+          setUserBio(data);
+          
+          // 💡 LA MAGIA: Sincronizar el selector de días automáticamente
+          if (data.dias_entrenamiento_semana) {
+            setDays(data.dias_entrenamiento_semana);
+          }
+        }
       }
 
       const { data: exData } = await supabase
@@ -90,7 +103,6 @@ export function MagicRoutineGenerator() {
     };
     init();
   }, []);
-
   const handleGenerate = async () => {
     setIsGenerating(true);
     await new Promise(r => setTimeout(r, 1500));
