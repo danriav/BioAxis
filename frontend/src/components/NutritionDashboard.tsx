@@ -16,7 +16,11 @@ export function NutritionDashboard() {
   );
 
   // 2. Estados Globales del Dashboard
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    return today.toISOString().split('T')[0];
+  });
   const [isSyncing, setIsSyncing] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeSlot, setActiveSlot] = useState("");
@@ -120,6 +124,33 @@ export function NutritionDashboard() {
     // aquí llamaríamos a: NutritionService.deleteLogsBySlot(user.id, selectedDate, slotNameToDelete)
   };
 
+  // ... debajo de handleDeleteSlot
+
+  // 🟢 NUEVA FUNCIÓN: Eliminar un alimento específico
+// 🟢 FUNCIÓN ACTUALIZADA: Sin alertas nativas y con mejor manejo de errores
+  const handleDeleteLog = async (logId: string) => {
+    // Para mejorar la UX, la eliminación ahora es inmediata (One-Click)
+    try {
+      const { error } = await supabase
+        .from('nutrition_logs')
+        .delete()
+        .eq('id', logId);
+
+      if (error) {
+        console.error("Bloqueo de Supabase:", error);
+        throw error;
+      }
+      
+      // Refrescamos los datos mágicamente sin que el usuario lo note
+      fetchDailyLogs();
+      
+    } catch (error) {
+      console.error("Error al eliminar log:", error);
+      // Solo mostramos alerta si algo se rompe por dentro
+      alert("Error del sistema: Verifica los permisos RLS en Supabase.");
+    }
+  };
+
   // 4. Calculadora de Totales Dinámicos
   const totals = meals.reduce((acc, item) => {
     const food = item.catalog_foods;
@@ -210,7 +241,8 @@ export function NutritionDashboard() {
             logs={meals.filter(m => m.meal_slot === slot)} 
             onAdd={() => openSearch(slot)}
             onRename={handleRenameSlot}
-            onDelete={handleDeleteSlot} 
+            onDelete={handleDeleteSlot}
+            onDeleteLog={handleDeleteLog} 
           />
         ))}
       </div>
@@ -224,6 +256,33 @@ export function NutritionDashboard() {
                 Añadir Nueva Comida
               </button>
             </div>
+            <FoodSearchModal
+              isOpen={isModalOpen}
+              onClose={() => setIsModalOpen(false)}
+              slotName={activeSlot} // 🟢 CAMBIO: Antes decía 'selectedSlot', debe ser 'slotName'
+              onAdded={async (food: any, grams: number) => {
+                try {
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (user) {
+                    // 🚀 PASO CRÍTICO: Guardar en la base de datos a través del servicio
+                    await NutritionService.addFoodLog({
+                      user_id: user.id,
+                      food_id: food.id,
+                      meal_slot: activeSlot,
+                      quantity_g: grams,
+                      target_date: selectedDate
+                    });
+
+                    // Una vez guardado, refrescamos y cerramos
+                    await fetchDailyLogs(); 
+                    setIsModalOpen(false);
+                  }
+                } catch (error) {
+                  console.error("Error al registrar Bio-Alimento:", error);
+                  alert("No se pudo registrar el alimento");
+                }
+              }}
+            />
           </div>
   );
 }
@@ -258,30 +317,37 @@ function MacroCard({ label, value, target, color, icon }: any) {
 
 // --- NUEVO COMPONENTE: CALENDARIO SEMANAL ---
 function WeeklyCalendar({ selectedDate, onSelectDate, streak = 0 }: any) {
-  const getWeekDates = (baseDateStr: string) => {
+  
+  // 🟢 NUEVO ALGORITMO: Siempre centra el día seleccionado
+  const getRollingDates = (baseDateStr: string) => {
+    // Forzamos el parseo a mediodía para evitar saltos raros por horas
     const baseDate = new Date(baseDateStr + "T12:00:00Z"); 
-    const day = baseDate.getUTCDay();
-    const diff = baseDate.getUTCDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(baseDate);
-    monday.setUTCDate(diff);
-    const week = [];
-    const dayNames = ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM']; // Nombres más largos para PC
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setUTCDate(monday.getUTCDate() + i);
+    const window = [];
+    // En JS, getDay() devuelve 0 para el Domingo, por eso cambia el orden
+    const dayNames = ['DOM', 'LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB']; 
+    
+    // Iteramos desde -3 (3 días atrás) hasta +3 (3 días adelante)
+    for (let i = -3; i <= 3; i++) {
+      const d = new Date(baseDate);
+      d.setUTCDate(baseDate.getUTCDate() + i);
       const dateStr = d.toISOString().split('T')[0];
-      week.push({
+      
+      window.push({
         dateStr,
-        dayName: dayNames[i],
+        dayName: dayNames[d.getUTCDay()],
         dayNumber: d.getUTCDate(),
         isSelected: dateStr === selectedDate
       });
     }
-    return week;
+    return window;
   };
 
-  const weekDays = getWeekDates(selectedDate);
-  const isTodaySelected = selectedDate === new Date().toISOString().split('T')[0];
+  const weekDays = getRollingDates(selectedDate);
+  const isTodaySelected = selectedDate === (() => {
+    const today = new Date();
+    today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+    return today.toISOString().split('T')[0];
+  })();
 
   return (
     <div className="bg-slate-900/50 border border-white/5 rounded-[1.5rem] p-6 mb-8 backdrop-blur-sm">
@@ -290,7 +356,7 @@ function WeeklyCalendar({ selectedDate, onSelectDate, streak = 0 }: any) {
         <div className="flex items-center gap-4">
           <h2 className="text-2xl font-black italic tracking-tighter text-white">BIO-PLAN</h2>
           <div className="h-4 w-px bg-white/20"></div>
-          {/* Nueva Racha (Streak) estilo Tech */}
+          {/* Racha (Streak) estilo Tech */}
           <div className="flex items-center gap-2 bg-cyan-500/10 px-3 py-1 rounded-md border border-cyan-500/20">
             <Zap size={16} className="text-cyan-400" />
             <span className="font-mono text-cyan-400 font-bold text-sm">{streak} DÍAS</span>
@@ -305,7 +371,7 @@ function WeeklyCalendar({ selectedDate, onSelectDate, streak = 0 }: any) {
         </div>
       </div>
 
-      {/* Días de la Semana (Diseño Desktop) */}
+      {/* Días de la Semana */}
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map((day, i) => (
           <button 
@@ -313,7 +379,7 @@ function WeeklyCalendar({ selectedDate, onSelectDate, streak = 0 }: any) {
             onClick={() => onSelectDate(day.dateStr)}
             className={`flex flex-col items-center gap-2 py-4 rounded-xl transition-all border-b-2 ${
               day.isSelected 
-                ? "bg-slate-800/80 border-cyan-500 text-white shadow-[0_4px_20px_-10px_rgba(6,182,212,0.3)]" 
+                ? "bg-slate-800/80 border-cyan-500 text-white shadow-[0_4px_20px_-10px_rgba(6,182,212,0.3)] transform scale-105" 
                 : "border-transparent text-slate-500 hover:bg-slate-800/40 hover:text-slate-300"
             }`}
           >
@@ -328,7 +394,7 @@ function WeeklyCalendar({ selectedDate, onSelectDate, streak = 0 }: any) {
   );
 }
 
-function MealSlot({ title, logs, onAdd, onRename, onDelete }: any) {
+function MealSlot({ title, logs, onAdd, onRename, onDelete, onDeleteLog }: any) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(title);
 
@@ -416,15 +482,28 @@ function MealSlot({ title, logs, onAdd, onRename, onDelete }: any) {
             const food = log.catalog_foods;
             const itemKcal = Math.round(food.calories_per_g * log.quantity_g);
             return (
-              <div key={i} className="flex justify-between items-center p-3 bg-slate-950/50 rounded-lg hover:bg-slate-800 transition-colors group">
+              <div key={log.id || i} className="flex justify-between items-center p-3 bg-slate-950/50 rounded-lg hover:bg-slate-800 transition-colors group">
                 <div className="flex items-center gap-3">
                   <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                  <span className="font-medium text-sm text-slate-300 group-hover:text-white transition-colors uppercase tracking-wide">{food.name_es}</span>
+                  <span className="font-medium text-sm text-slate-300 group-hover:text-white transition-colors uppercase tracking-wide">
+                    {food.name_es}
+                  </span>
                 </div>
-                <div className="flex items-center gap-2 font-mono text-xs">
+                
+                {/* 🟢 CAMBIO 2: Bloque derecho con el nuevo botón */}
+                <div className="flex items-center gap-3 font-mono text-xs">
                   <span className="text-slate-500">{log.quantity_g}g</span>
                   <span className="bg-slate-800 px-2 py-1 rounded text-slate-300">{itemKcal} kcal</span>
+                  
+                  <button 
+                    onClick={() => onDeleteLog(log.id)}
+                    className="text-slate-600 hover:text-rose-500 hover:bg-rose-500/10 p-1.5 rounded-md transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100"
+                    title="Eliminar alimento"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
+
               </div>
             );
           })
