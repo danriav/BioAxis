@@ -51,17 +51,15 @@ Nutrition models demand pristine data sources. BioAxis utilizes a standardized d
 BioAxis utilizes a complete Dockerized workflow for an identical Dev-to-Prod parity. 
 
 ### 1. Environment Configuration
-Create the following `.env` files based on this template (DO NOT commit real keys):
+Use `.env.example` as the only committed configuration template. Copy the
+relevant keys into local runtime files and fill them with sandbox or rotated
+values outside git:
 
-**Frontend (`frontend/.env.local`) & Backend (`backend/.env`)**
-```env
-# Supabase Configuration
-NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+- `backend/.env`
+- `frontend/.env.local`
 
-SUPABASE_URL="https://your-project.supabase.co"
-SUPABASE_ANON_KEY="your-anon-key"
-```
+Do not create `backend/app/.env`. Do not commit real Supabase, Gemini, JWT, or
+database credentials.
 
 ### 2. Infrastructure Initialization
 Run the orchestration command from the root directory to build and spin up the microservices:

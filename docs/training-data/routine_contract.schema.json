@@ -1,0 +1,211 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bioaxis.local/schemas/generated-training-routine.v1.json",
+  "title": "GeneratedTrainingRoutine",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "routine_id", "input_profile", "program", "quality_checks"],
+  "properties": {
+    "contract_version": {
+      "const": "training_routine.v1"
+    },
+    "routine_id": {
+      "type": "string",
+      "pattern": "^routine_[a-zA-Z0-9_-]+$"
+    },
+    "input_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile_id", "sex", "experience", "goal", "days_available", "time_budget_minutes", "anthropometrics"],
+      "properties": {
+        "profile_id": {
+          "type": "string",
+          "description": "Anonymous or synthetic profile identifier. Never store a real name here."
+        },
+        "sex": {
+          "enum": ["male", "female", "other"]
+        },
+        "experience": {
+          "enum": ["novice", "intermediate", "advanced"]
+        },
+        "goal": {
+          "enum": ["hypertrophy", "fat_loss", "strength_hypertrophy", "recomposition", "general_fitness"]
+        },
+        "days_available": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7
+        },
+        "time_budget_minutes": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 150
+        },
+        "anthropometrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["height_bucket_cm", "weight_bucket_kg", "bmi_bucket", "ratio_type", "ratio_gap_bucket"],
+          "properties": {
+            "height_bucket_cm": { "type": "string" },
+            "weight_bucket_kg": { "type": "string" },
+            "bmi_bucket": { "type": "string" },
+            "ratio_type": { "enum": ["golden_ratio", "hourglass_ratio", "none"] },
+            "ratio_gap_bucket": { "enum": ["low", "moderate", "high", "very_high", "unknown"] }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "injuries": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "equipment": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "excluded_exercises": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "program": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "duration_weeks", "frequency_days", "split_type", "progression", "weekly_volume_targets", "sessions"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 140
+        },
+        "duration_weeks": {
+          "type": "integer",
+          "minimum": 4,
+          "maximum": 24
+        },
+        "frequency_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 7
+        },
+        "split_type": {
+          "enum": ["full_body", "upper_lower", "push_pull_legs", "lower_upper_bias", "specialization", "hybrid"]
+        },
+        "weekly_volume_targets": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 22
+          }
+        },
+        "progression": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["model", "rir_start", "rir_end", "deload"],
+          "properties": {
+            "model": {
+              "enum": ["double_progression", "load_progression", "set_progression", "volume_wave"]
+            },
+            "rir_start": { "type": "integer", "minimum": 0, "maximum": 4 },
+            "rir_end": { "type": "integer", "minimum": 0, "maximum": 4 },
+            "deload": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["week", "volume_multiplier", "intensity_note"],
+              "properties": {
+                "week": { "type": "integer", "minimum": 1, "maximum": 24 },
+                "volume_multiplier": { "type": "number", "minimum": 0.3, "maximum": 1 },
+                "intensity_note": { "type": "string" }
+              }
+            }
+          }
+        },
+        "sessions": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["day_number", "label", "focus", "estimated_minutes", "exercises"],
+            "properties": {
+              "day_number": { "type": "integer", "minimum": 1, "maximum": 7 },
+              "label": { "type": "string" },
+              "focus": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "estimated_minutes": { "type": "integer", "minimum": 20, "maximum": 180 },
+              "exercises": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["order", "exercise_id", "exercise_name", "primary_muscle", "sets", "rep_range", "rir_target", "rest_seconds", "weekly_set_contribution"],
+                  "properties": {
+                    "order": { "type": "integer", "minimum": 1, "maximum": 50 },
+                    "exercise_id": { "type": ["string", "null"] },
+                    "exercise_name": { "type": "string" },
+                    "primary_muscle": { "type": "string" },
+                    "secondary_muscles": {
+                      "type": "array",
+                      "items": { "type": "string" }
+                    },
+                    "biomechanical_bias": {
+                      "enum": ["stretch", "shortened", "mid_range", "mixed", "cardio", "unknown"]
+                    },
+                    "sets": { "type": "integer", "minimum": 1, "maximum": 8 },
+                    "rep_range": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["min", "max"],
+                      "properties": {
+                        "min": { "type": "integer", "minimum": 1, "maximum": 100 },
+                        "max": { "type": "integer", "minimum": 1, "maximum": 100 }
+                      }
+                    },
+                    "rir_target": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["min", "max"],
+                      "properties": {
+                        "min": { "type": "integer", "minimum": 0, "maximum": 4 },
+                        "max": { "type": "integer", "minimum": 0, "maximum": 4 }
+                      }
+                    },
+                    "rest_seconds": { "type": "integer", "minimum": 30, "maximum": 600 },
+                    "tempo": { "type": ["string", "null"] },
+                    "weekly_set_contribution": { "type": "number", "minimum": 0, "maximum": 8 },
+                    "coaching_notes": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "quality_checks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["weekly_volume_within_caps", "session_volume_within_time_budget", "no_excluded_exercises", "warnings"],
+      "properties": {
+        "weekly_volume_within_caps": { "type": "boolean" },
+        "session_volume_within_time_budget": { "type": "boolean" },
+        "no_excluded_exercises": { "type": "boolean" },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

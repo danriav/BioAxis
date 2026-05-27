@@ -8,8 +8,9 @@ import {
   Loader2, ChevronRight, BarChart3, Activity 
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { NutritionApiError, NutritionService } from "@/lib/nutrition-service";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 const cardStyle = "bg-slate-900/40 backdrop-blur-md border border-slate-800 p-8 rounded-[3rem] shadow-xl hover:border-cyan-500/30 transition-all duration-500";
 
@@ -18,18 +19,31 @@ export default function ScientificDashboard() {
   const [hoveredData, setHoveredData] = useState<any>(null);
   
   const [loading, setLoading] = useState(true);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
   const [bioTargets, setBioTargets] = useState<any>(null);
   
   const params = useParams();
+  const router = useRouter();
   const locale = params?.locale || "es";
 
 useEffect(() => {
     const fetchBioData = async () => {
       const supabase = getSupabaseClient();
-      if (!supabase) return;
+      if (!supabase) {
+        setStatusMessage("No se pudo inicializar la sesion local.");
+        setLoading(false);
+        return;
+      }
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { session } } = await supabase.auth.getSession();
+        const user = session?.user;
+        if (!user || !session?.access_token) {
+          setStatusMessage("Necesitas iniciar sesion para ver tu dashboard.");
+          setLoading(false);
+          router.replace(`/${locale}/login`);
+          return;
+        }
         if (user) {
           const { data: profile } = await supabase
             .from('user_profiles')
@@ -49,21 +63,43 @@ useEffect(() => {
           if (data?.[0]) setUserBio(data[0]);
 
           // 🟢 CAMBIO 1: Llamada al Bio-Motor de Python
-          const response = await fetch(`${process.env.NEXT_PUBLIC_PYTHON_API_URL}/nutrition/targets/${user.id}`);
-          if (response.ok) {
-            const targets = await response.json();
-            setBioTargets(targets);
-          }
+          const targets = await NutritionService.getTargets(user.id, session.access_token);
+          setBioTargets(targets);
         }
-      } catch (err) { console.error(err); } finally { setLoading(false); }
+      } catch (err) {
+        if (err instanceof NutritionApiError && err.status === 401) {
+          setStatusMessage("Tu sesion expiro. Inicia sesion otra vez.");
+          router.replace(`/${locale}/login`);
+        } else if (err instanceof NutritionApiError && err.status === 403) {
+          setStatusMessage("No tienes acceso a este dashboard.");
+        } else {
+          setStatusMessage("No pudimos cargar el dashboard. Intenta de nuevo.");
+        }
+      } finally { setLoading(false); }
     };
     fetchBioData();
-  }, []);
+  }, [locale, router]);
 
   if (loading) return (
     <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center gap-4">
       <Loader2 className="text-cyan-500 animate-spin w-12 h-12" />
       <p className="text-cyan-500 font-mono text-[10px] uppercase tracking-widest">Sincronizando Matriz...</p>
+    </div>
+  );
+
+  if (statusMessage) return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white">
+      <div className="max-w-md rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-center">
+        <ShieldCheck className="mx-auto mb-4 text-cyan-400" size={32} />
+        <h1 className="text-xl font-black uppercase tracking-widest">Sesion requerida</h1>
+        <p className="mt-3 text-sm text-slate-400">{statusMessage}</p>
+        <Link
+          href={`/${locale}/login`}
+          className="mt-6 inline-flex rounded-2xl bg-cyan-500 px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-950"
+        >
+          Ir a login
+        </Link>
+      </div>
     </div>
   );
 

@@ -5,8 +5,7 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { QueryProvider } from "@/providers/query-provider";
 import { Sidebar } from "@/components/navigation/sidebar";
-// 🟢 IMPORTAMOS EL CHAT
-import { ChatWidget } from "@/components/chat/chat-widget"; 
+import { ChatWidget } from "@/components/chat/chat-widget";
 
 type LocaleLayoutProps = {
   children: React.ReactNode;
@@ -28,22 +27,14 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body className="bg-slate-950" suppressHydrationWarning>
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          <QueryProvider>
-            <div className="flex min-h-screen">
-              <Sidebar />
-              <main className="flex-1 overflow-y-auto">
-                {children}
-              </main>
-              
-              {/* 🟢 EL CHAT WIDGET: Al estar aquí, aparecerá en todas las rutas */}
-              <ChatWidget />
-            </div>
-          </QueryProvider>
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <NextIntlClientProvider locale={locale} messages={messages}>
+      <QueryProvider>
+        <div className="flex min-h-screen bg-slate-950">
+          <Sidebar />
+          <main className="flex-1 overflow-y-auto">{children}</main>
+          <ChatWidget />
+        </div>
+      </QueryProvider>
+    </NextIntlClientProvider>
   );
 }

@@ -6,3 +6,6 @@ pydantic-settings>=2.6.0,<3
 sqlalchemy[asyncio]>=2.0.36,<2.1
 asyncpg>=0.30.0,<0.31
 python-dotenv>=1.0.0,<2
+supabase>=2.0.0,<3
+pytest>=8.3.0,<9
+pytest-cov>=5.0.0,<6

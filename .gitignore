@@ -1,0 +1,26 @@
+# Local environment files. Only example files are allowed in git.
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Explicitly forbidden dotenv location for the FastAPI package.
+backend/app/.env
+backend/app/.env.*
+backend/.sandbox_jwt
+*.jwt
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.next/
+out/
+build/
+Rutinas_de_referencia/
+e2e-artifacts/

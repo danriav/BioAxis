@@ -1,0 +1,892 @@
+{
+  "generated_frequency_stats": {
+    "Abdomen": {
+      "mean": 1.0,
+      "median": 1.0,
+      "p25": 1.0,
+      "p75": 1.0
+    },
+    "Abductores": {
+      "mean": 1.96,
+      "median": 2.0,
+      "p25": 2.0,
+      "p75": 2.0
+    },
+    "Aductores": {
+      "mean": 1.96,
+      "median": 2.0,
+      "p25": 2.0,
+      "p75": 2.0
+    },
+    "Bíceps": {
+      "mean": 1.38,
+      "median": 1.0,
+      "p25": 1.0,
+      "p75": 2.0
+    },
+    "Cuádriceps": {
+      "mean": 1.81,
+      "median": 2.0,
+      "p25": 1.0,
+      "p75": 2.0
+    },
+    "Espalda": {
+      "mean": 1.38,
+      "median": 1.0,
+      "p25": 1.0,
+      "p75": 2.0
+    },
+    "Femoral": {
+      "mean": 1.81,
+      "median": 2.0,
+      "p25": 1.0,
+      "p75": 2.0
+    },
+    "Glúteo": {
+      "mean": 1.81,
+      "median": 2.0,
+      "p25": 1.0,
+      "p75": 2.0
+    },
+    "Hombros": {
+      "mean": 1.38,
+      "median": 1.0,
+      "p25": 1.0,
+      "p75": 2.0
+    },
+    "Pantorrilla": {
+      "mean": 1.81,
+      "median": 2.0,
+      "p25": 1.0,
+      "p75": 2.0
+    },
+    "Pecho": {
+      "mean": 1.38,
+      "median": 1.0,
+      "p25": 1.0,
+      "p75": 2.0
+    },
+    "Tríceps": {
+      "mean": 1.38,
+      "median": 1.0,
+      "p25": 1.0,
+      "p75": 2.0
+    },
+    "cardio": {
+      "mean": 1.0,
+      "median": 1.0,
+      "p25": 1.0,
+      "p75": 1.0
+    }
+  },
+  "generated_volume_by_sex": {
+    "female": {
+      "Abdomen": {
+        "mean": 3.0,
+        "median": 3.0,
+        "p25": 3.0,
+        "p75": 3.0
+      },
+      "Abductores": {
+        "mean": 8.0,
+        "median": 6.0,
+        "p25": 6.0,
+        "p75": 9.25
+      },
+      "Aductores": {
+        "mean": 7.32,
+        "median": 6.0,
+        "p25": 6.0,
+        "p75": 9.0
+      },
+      "Bíceps": {
+        "mean": 7.84,
+        "median": 6.0,
+        "p25": 6.0,
+        "p75": 10.0
+      },
+      "Cuádriceps": {
+        "mean": 12.33,
+        "median": 12.0,
+        "p25": 9.0,
+        "p75": 14.0
+      },
+      "Espalda": {
+        "mean": 11.9,
+        "median": 12.0,
+        "p25": 10.0,
+        "p75": 16.0
+      },
+      "Femoral": {
+        "mean": 11.43,
+        "median": 12.0,
+        "p25": 9.0,
+        "p75": 13.0
+      },
+      "Glúteo": {
+        "mean": 11.88,
+        "median": 12.0,
+        "p25": 8.0,
+        "p75": 16.0
+      },
+      "Hombros": {
+        "mean": 12.2,
+        "median": 12.0,
+        "p25": 10.0,
+        "p75": 16.0
+      },
+      "Pantorrilla": {
+        "mean": 8.75,
+        "median": 9.0,
+        "p25": 6.0,
+        "p75": 10.0
+      },
+      "Pecho": {
+        "mean": 10.12,
+        "median": 8.0,
+        "p25": 6.0,
+        "p75": 14.0
+      },
+      "Tríceps": {
+        "mean": 7.84,
+        "median": 6.0,
+        "p25": 6.0,
+        "p75": 10.0
+      },
+      "cardio": {
+        "mean": 1.0,
+        "median": 1.0,
+        "p25": 1.0,
+        "p75": 1.0
+      }
+    },
+    "male": {
+      "Abdomen": {
+        "mean": 3.0,
+        "median": 3.0,
+        "p25": 3.0,
+        "p75": 3.0
+      },
+      "Abductores": {
+        "mean": 7.45,
+        "median": 6.0,
+        "p25": 6.0,
+        "p75": 9.0
+      },
+      "Aductores": {
+        "mean": 6.88,
+        "median": 6.0,
+        "p25": 6.0,
+        "p75": 8.0
+      },
+      "Bíceps": {
+        "mean": 9.22,
+        "median": 10.0,
+        "p25": 6.0,
+        "p75": 12.0
+      },
+      "Cuádriceps": {
+        "mean": 13.2,
+        "median": 14.0,
+        "p25": 12.0,
+        "p75": 15.0
+      },
+      "Espalda": {
+        "mean": 13.51,
+        "median": 16.0,
+        "p25": 10.0,
+        "p75": 18.0
+      },
+      "Femoral": {
+        "mean": 12.29,
+        "median": 12.0,
+        "p25": 12.0,
+        "p75": 12.0
+      },
+      "Glúteo": {
+        "mean": 11.92,
+        "median": 12.0,
+        "p25": 8.0,
+        "p75": 12.0
+      },
+      "Hombros": {
+        "mean": 14.12,
+        "median": 16.0,
+        "p25": 10.0,
+        "p75": 20.0
+      },
+      "Pantorrilla": {
+        "mean": 9.9,
+        "median": 10.0,
+        "p25": 8.0,
+        "p75": 12.0
+      },
+      "Pecho": {
+        "mean": 11.76,
+        "median": 14.0,
+        "p25": 6.0,
+        "p75": 18.0
+      },
+      "Tríceps": {
+        "mean": 9.22,
+        "median": 10.0,
+        "p25": 6.0,
+        "p75": 12.0
+      },
+      "cardio": {
+        "mean": 1.0,
+        "median": 1.0,
+        "p25": 1.0,
+        "p75": 1.0
+      }
+    }
+  },
+  "generated_volume_stats": {
+    "Abdomen": {
+      "mean": 3.0,
+      "median": 3.0,
+      "p25": 3.0,
+      "p75": 3.0
+    },
+    "Abductores": {
+      "mean": 7.74,
+      "median": 6.0,
+      "p25": 6.0,
+      "p75": 9.0
+    },
+    "Aductores": {
+      "mean": 7.11,
+      "median": 6.0,
+      "p25": 6.0,
+      "p75": 8.25
+    },
+    "Bíceps": {
+      "mean": 8.52,
+      "median": 8.0,
+      "p25": 6.0,
+      "p75": 12.0
+    },
+    "Cuádriceps": {
+      "mean": 12.76,
+      "median": 12.0,
+      "p25": 12.0,
+      "p75": 15.0
+    },
+    "Espalda": {
+      "mean": 12.69,
+      "median": 12.0,
+      "p25": 10.0,
+      "p75": 16.0
+    },
+    "Femoral": {
+      "mean": 11.85,
+      "median": 12.0,
+      "p25": 10.0,
+      "p75": 12.5
+    },
+    "Glúteo": {
+      "mean": 11.9,
+      "median": 12.0,
+      "p25": 8.0,
+      "p75": 16.0
+    },
+    "Hombros": {
+      "mean": 13.14,
+      "median": 12.0,
+      "p25": 10.0,
+      "p75": 16.0
+    },
+    "Pantorrilla": {
+      "mean": 9.31,
+      "median": 9.0,
+      "p25": 8.0,
+      "p75": 12.0
+    },
+    "Pecho": {
+      "mean": 10.92,
+      "median": 9.0,
+      "p25": 6.0,
+      "p75": 14.0
+    },
+    "Tríceps": {
+      "mean": 8.52,
+      "median": 8.0,
+      "p25": 6.0,
+      "p75": 12.0
+    },
+    "cardio": {
+      "mean": 1.0,
+      "median": 1.0,
+      "p25": 1.0,
+      "p75": 1.0
+    }
+  },
+  "manual_frequency_by_sheet": {
+    "sheet_0ef55b3549a6": {
+      "Bíceps": 2,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 2,
+      "Pantorrilla": 1,
+      "Pecho": 2,
+      "Tríceps": 2
+    },
+    "sheet_1a0a13b69b60": {
+      "Bíceps": 1,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 1,
+      "Pantorrilla": 1,
+      "Pecho": 1,
+      "Tríceps": 1
+    },
+    "sheet_24714facbf6b": {
+      "Abductores": 1,
+      "Aductores": 1,
+      "Bíceps": 1,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 1,
+      "Hombro posterior": 1,
+      "Pantorrilla": 1,
+      "Pecho": 1,
+      "Tríceps": 1
+    },
+    "sheet_2e20c464e415": {
+      "Abductores": 1,
+      "Aductores": 1,
+      "Bíceps": 1,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 1,
+      "Pantorrilla": 1,
+      "Pecho": 1,
+      "Tríceps": 1
+    },
+    "sheet_319af1e8cee0": {
+      "Abductores": 1,
+      "Aductores": 1,
+      "Bíceps": 2,
+      "Cuádriceps": 1,
+      "Espalda": 2,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 2,
+      "Hombro lateral": 2,
+      "Hombro posterior": 1,
+      "Pantorrilla": 1,
+      "Pecho": 2,
+      "Tríceps": 2
+    },
+    "sheet_4c929fd2417f": {
+      "Abductores": 1,
+      "Aductores": 1,
+      "Bíceps": 1,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 1,
+      "Hombro posterior": 1,
+      "Pantorrilla": 1,
+      "Pecho": 1,
+      "Tríceps": 1
+    },
+    "sheet_76a937e9d711": {
+      "Abductores": 1,
+      "Bíceps": 1,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 1,
+      "Hombro posterior": 1,
+      "Pantorrilla": 1,
+      "Pecho": 1,
+      "Tríceps": 1
+    },
+    "sheet_910a41af87d9": {
+      "Abductores": 1,
+      "Aductores": 1,
+      "Bíceps": 1,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 1,
+      "Pantorrilla": 1,
+      "Pecho": 1,
+      "Tríceps": 1
+    },
+    "sheet_af2fefa5b82a": {
+      "Abductores": 1,
+      "Aductores": 1,
+      "Bíceps": 1,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 1,
+      "Pantorrilla": 1,
+      "Pecho": 1,
+      "Tríceps": 1
+    },
+    "sheet_e2a89a57c8c1": {
+      "Abductores": 1,
+      "Aductores": 1,
+      "Bíceps": 1,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 1,
+      "Pantorrilla": 1,
+      "Pecho": 1,
+      "Tríceps": 1
+    },
+    "sheet_e9809fa804a9": {
+      "Abductores": 1,
+      "Aductores": 1,
+      "Bíceps": 1,
+      "Cuádriceps": 1,
+      "Espalda": 1,
+      "Femoral": 1,
+      "Glúteo": 1,
+      "Hombro frontal": 1,
+      "Hombro lateral": 1,
+      "Pantorrilla": 1,
+      "Pecho": 1,
+      "Tríceps": 1
+    }
+  },
+  "manual_volume_by_sheet": {
+    "sheet_0ef55b3549a6": {
+      "Bíceps": 12.0,
+      "Cuádriceps": 4.5,
+      "Espalda": 9.0,
+      "Femoral": 3.0,
+      "Glúteo": 4.5,
+      "Hombro frontal": 3.0,
+      "Hombro lateral": 6.0,
+      "Pantorrilla": 3.0,
+      "Pecho": 15.0,
+      "Tríceps": 12.0
+    },
+    "sheet_1a0a13b69b60": {
+      "Bíceps": 6.0,
+      "Cuádriceps": 9.0,
+      "Espalda": 9.0,
+      "Femoral": 4.5,
+      "Glúteo": 10.5,
+      "Hombro frontal": 3.0,
+      "Hombro lateral": 3.0,
+      "Pantorrilla": 8.0,
+      "Pecho": 4.0,
+      "Tríceps": 6.0
+    },
+    "sheet_24714facbf6b": {
+      "Abductores": 9.0,
+      "Aductores": 3.0,
+      "Bíceps": 6.0,
+      "Cuádriceps": 10.5,
+      "Espalda": 9.0,
+      "Femoral": 9.5,
+      "Glúteo": 12.0,
+      "Hombro frontal": 3.0,
+      "Hombro lateral": 4.0,
+      "Hombro posterior": 3.0,
+      "Pantorrilla": 10.0,
+      "Pecho": 4.0,
+      "Tríceps": 8.0
+    },
+    "sheet_2e20c464e415": {
+      "Abductores": 7.0,
+      "Aductores": 3.0,
+      "Bíceps": 12.0,
+      "Cuádriceps": 9.0,
+      "Espalda": 12.0,
+      "Femoral": 5.5,
+      "Glúteo": 10.5,
+      "Hombro frontal": 6.0,
+      "Hombro lateral": 7.0,
+      "Pantorrilla": 8.0,
+      "Pecho": 12.0,
+      "Tríceps": 12.0
+    },
+    "sheet_319af1e8cee0": {
+      "Abductores": 7.0,
+      "Aductores": 3.0,
+      "Bíceps": 15.0,
+      "Cuádriceps": 9.0,
+      "Espalda": 15.0,
+      "Femoral": 5.5,
+      "Glúteo": 10.5,
+      "Hombro frontal": 6.0,
+      "Hombro lateral": 7.0,
+      "Hombro posterior": 3.0,
+      "Pantorrilla": 8.0,
+      "Pecho": 15.0,
+      "Tríceps": 15.0
+    },
+    "sheet_4c929fd2417f": {
+      "Abductores": 9.0,
+      "Aductores": 3.0,
+      "Bíceps": 6.0,
+      "Cuádriceps": 10.5,
+      "Espalda": 9.0,
+      "Femoral": 9.5,
+      "Glúteo": 12.0,
+      "Hombro frontal": 3.0,
+      "Hombro lateral": 4.0,
+      "Hombro posterior": 3.0,
+      "Pantorrilla": 10.0,
+      "Pecho": 4.0,
+      "Tríceps": 8.0
+    },
+    "sheet_76a937e9d711": {
+      "Abductores": 4.0,
+      "Bíceps": 9.0,
+      "Cuádriceps": 4.5,
+      "Espalda": 9.0,
+      "Femoral": 4.0,
+      "Glúteo": 4.5,
+      "Hombro frontal": 3.0,
+      "Hombro lateral": 4.0,
+      "Hombro posterior": 3.0,
+      "Pantorrilla": 4.0,
+      "Pecho": 9.0,
+      "Tríceps": 9.0
+    },
+    "sheet_910a41af87d9": {
+      "Abductores": 4.0,
+      "Aductores": 4.0,
+      "Bíceps": 8.0,
+      "Cuádriceps": 9.0,
+      "Espalda": 9.0,
+      "Femoral": 5.5,
+      "Glúteo": 10.5,
+      "Hombro frontal": 3.0,
+      "Hombro lateral": 4.0,
+      "Pantorrilla": 8.0,
+      "Pecho": 4.0,
+      "Tríceps": 8.0
+    },
+    "sheet_af2fefa5b82a": {
+      "Abductores": 4.0,
+      "Aductores": 4.0,
+      "Bíceps": 6.0,
+      "Cuádriceps": 9.0,
+      "Espalda": 6.0,
+      "Femoral": 5.5,
+      "Glúteo": 10.5,
+      "Hombro frontal": 3.0,
+      "Hombro lateral": 3.0,
+      "Pantorrilla": 8.0,
+      "Pecho": 4.0,
+      "Tríceps": 6.0
+    },
+    "sheet_e2a89a57c8c1": {
+      "Abductores": 4.0,
+      "Aductores": 4.0,
+      "Bíceps": 6.0,
+      "Cuádriceps": 9.0,
+      "Espalda": 6.0,
+      "Femoral": 5.5,
+      "Glúteo": 10.5,
+      "Hombro frontal": 3.0,
+      "Hombro lateral": 3.0,
+      "Pantorrilla": 8.0,
+      "Pecho": 4.0,
+      "Tríceps": 6.0
+    },
+    "sheet_e9809fa804a9": {
+      "Abductores": 4.0,
+      "Aductores": 4.0,
+      "Bíceps": 8.0,
+      "Cuádriceps": 9.0,
+      "Espalda": 9.0,
+      "Femoral": 5.5,
+      "Glúteo": 10.5,
+      "Hombro frontal": 3.0,
+      "Hombro lateral": 4.0,
+      "Pantorrilla": 8.0,
+      "Pecho": 4.0,
+      "Tríceps": 8.0
+    }
+  },
+  "source_counts": {
+    "generated_exercise_rows": 3437,
+    "generated_profiles": 100,
+    "manual_reference_exercise_rows": 291,
+    "manual_reference_routine_sheets": 11
+  },
+  "top_exercises_generated": [
+    [
+      "Elevaciones Laterales en Polea",
+      157
+    ],
+    [
+      "Curl Bayesian (Polea tras espalda)",
+      140
+    ],
+    [
+      "Peso Muerto Rumano (Barra)",
+      106
+    ],
+    [
+      "Elevación de Talón de Pie",
+      103
+    ],
+    [
+      "Step Up (Enfoque Glúteo)",
+      101
+    ],
+    [
+      "Peso Muerto Rumano (Mancuernas)",
+      99
+    ],
+    [
+      "Sentadilla Búlgara",
+      95
+    ],
+    [
+      "Remo Unilateral con Mancuerna",
+      95
+    ],
+    [
+      "Donkey Calf Raise",
+      94
+    ],
+    [
+      "Elevación de Talón Sentado",
+      91
+    ],
+    [
+      "Sentadilla Sumo (Mancuerna)",
+      85
+    ],
+    [
+      "Press Inclinado (Pecho Superior)",
+      84
+    ],
+    [
+      "Curl Femoral Tumbado",
+      83
+    ],
+    [
+      "Aducción en Polea",
+      81
+    ],
+    [
+      "Extensión de Piernas",
+      80
+    ],
+    [
+      "Sentadilla Goblet",
+      78
+    ],
+    [
+      "Curl Femoral Sentado",
+      77
+    ],
+    [
+      "Jalón al Pecho",
+      74
+    ],
+    [
+      "Remo Gironda (Polea Baja)",
+      72
+    ],
+    [
+      "Press de Banca",
+      69
+    ]
+  ],
+  "top_exercises_manual": [
+    [
+      "Elevaciones de talón",
+      20
+    ],
+    [
+      "Aductores",
+      13
+    ],
+    [
+      "Hip thrust",
+      11
+    ],
+    [
+      "Extensión de cuádriceps",
+      11
+    ],
+    [
+      "Curl femoral sentado",
+      11
+    ],
+    [
+      "Press inclinado con mancuernas",
+      10
+    ],
+    [
+      "Curl predicador",
+      10
+    ],
+    [
+      "Abductores",
+      10
+    ],
+    [
+      "Peso muerto rumano con barra",
+      9
+    ],
+    [
+      "Press militar",
+      9
+    ],
+    [
+      "Elevaciones laterales",
+      8
+    ],
+    [
+      "Curl bayesian",
+      8
+    ],
+    [
+      "Extensión de tríceps en predicador",
+      7
+    ],
+    [
+      "Extensión de tríceps katana",
+      6
+    ],
+    [
+      "Extensión de tríceps con polea",
+      6
+    ],
+    [
+      "Búlgaras (enfoque en glúteo)",
+      6
+    ],
+    [
+      "Jalón al pecho (agarre amplio)",
+      6
+    ],
+    [
+      "Remo T (agarre neutro)",
+      6
+    ],
+    [
+      "Jalón al pecho",
+      5
+    ],
+    [
+      "Sentadilla Hack",
+      5
+    ]
+  ],
+  "top_weekly_structures": [
+    {
+      "count": 16,
+      "structure": [
+        "Full body"
+      ]
+    },
+    {
+      "count": 13,
+      "structure": [
+        "Empuje",
+        "Pierna",
+        "Tracción",
+        "Pierna",
+        "Superior",
+        "Core"
+      ]
+    },
+    {
+      "count": 10,
+      "structure": [
+        "Pierna",
+        "Superior",
+        "Pierna"
+      ]
+    },
+    {
+      "count": 9,
+      "structure": [
+        "Pierna",
+        "Empuje",
+        "Tracción",
+        "Pierna"
+      ]
+    },
+    {
+      "count": 8,
+      "structure": [
+        "Pierna",
+        "Superior"
+      ]
+    },
+    {
+      "count": 7,
+      "structure": [
+        "Superior",
+        "Pierna"
+      ]
+    },
+    {
+      "count": 6,
+      "structure": [
+        "Pierna",
+        "Empuje",
+        "Pierna",
+        "Tracción",
+        "Pierna",
+        "Core"
+      ]
+    },
+    {
+      "count": 6,
+      "structure": [
+        "Pierna",
+        "Tracción",
+        "Pierna",
+        "Empuje",
+        "Pierna"
+      ]
+    },
+    {
+      "count": 5,
+      "structure": [
+        "Superior",
+        "Pierna",
+        "Superior",
+        "Pierna"
+      ]
+    },
+    {
+      "count": 5,
+      "structure": [
+        "Superior",
+        "Pierna",
+        "Superior"
+      ]
+    }
+  ]
+}
