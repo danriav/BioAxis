@@ -27,7 +27,7 @@ export default function LoginPage() {
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -38,7 +38,14 @@ export default function LoginPage() {
       return;
     }
 
-    router.push(`/${locale}/dashboard`);
+    const activeSession = data.session || (await supabase.auth.getSession()).data.session;
+    if (!activeSession?.access_token) {
+      setAuthMessage("No pudimos cargar la sesión local. Intenta de nuevo.");
+      setLoading(false);
+      return;
+    }
+
+    router.replace(`/${locale}/dashboard`);
     router.refresh();
   };
 
@@ -54,15 +61,15 @@ export default function LoginPage() {
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-10 rounded-[40px] shadow-2xl z-10"
+        className="w-full max-w-md bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-10 rounded-3xl shadow-2xl z-10"
       >
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-br from-cyan-500 to-blue-600 mb-6 shadow-lg shadow-cyan-500/20">
             <Zap className="text-slate-950" size={32} />
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight">BIOAXIS</h1>
+          <h1 className="text-3xl font-black text-white tracking-tight">KALOS</h1>
           <p className="text-slate-400 mt-2 text-sm font-medium italic">
-            Optimize your biological potential
+            Tu progreso físico, medido con precisión
           </p>
         </div>
 
@@ -76,7 +83,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="nombre@bioaxis.com"
+              placeholder="nombre@kalos.com"
               className="w-full bg-slate-950 border border-slate-800 rounded-2xl px-6 py-4 mt-2 text-white outline-none focus:border-cyan-500 transition-all"
             />
           </div>
@@ -112,7 +119,7 @@ export default function LoginPage() {
               <Loader2 className="animate-spin" />
             ) : (
               <>
-                Iniciar Protocolo
+                Ingresar
                 <ShieldCheck size={20} className="group-hover:rotate-12 transition-transform" />
               </>
             )}
@@ -126,7 +133,7 @@ export default function LoginPage() {
             onClick={handleRegisterIntent}
             className="text-cyan-400 font-bold hover:underline"
           >
-            Registrar Biotipo
+            Registrar
           </button>
         </div>
       </motion.div>

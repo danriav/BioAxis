@@ -3,15 +3,45 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { motion } from "framer-motion";
 import { ArrowLeft, Save, Loader2, ShieldCheck, Ruler } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+
+type MetricsState = {
+  peso: string;
+  hombros: string;
+  pecho: string;
+  brazo: string;
+  antebrazo: string;
+  cintura: string;
+  cadera: string;
+  gluteo: string;
+  pierna: string;
+  pantorrilla: string;
+};
+
+type BaseAthleteData = {
+  genero?: string;
+  edad?: number;
+  altura?: number;
+};
+
+const metricKeys: Array<Exclude<keyof MetricsState, "peso">> = [
+  "hombros",
+  "pecho",
+  "brazo",
+  "antebrazo",
+  "cintura",
+  "cadera",
+  "gluteo",
+  "pierna",
+  "pantorrilla",
+];
 
 export default function UpdateMetricsPage() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [baseData, setBaseData] = useState<any>(null);
-  const [metrics, setMetrics] = useState({
+  const [baseData, setBaseData] = useState<BaseAthleteData | null>(null);
+  const [metrics, setMetrics] = useState<MetricsState>({
     peso: "",
     hombros: "",
     pecho: "",
@@ -83,9 +113,9 @@ export default function UpdateMetricsPage() {
       .from('dim_atleta')
       .insert({
         user_id: user?.id,
-        genero: baseData.genero,
-        edad: baseData.edad,
-        altura: baseData.altura,
+        genero: baseData?.genero,
+        edad: baseData?.edad,
+        altura: baseData?.altura,
         peso: parseFloat(metrics.peso),
         hombros: parseFloat(metrics.hombros) || null,
         pecho: parseFloat(metrics.pecho) || null,
@@ -129,7 +159,7 @@ export default function UpdateMetricsPage() {
       </header>
 
       <main className="max-w-3xl mx-auto space-y-8">
-        <div className="bg-cyan-500/5 border border-cyan-500/20 p-8 rounded-[2.5rem] shadow-xl">
+        <div className="bg-cyan-500/5 border border-cyan-500/20 p-8 rounded-3xl shadow-xl">
           <div className="flex items-center gap-3 mb-6">
             <ShieldCheck className="text-cyan-500" size={24} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em]">Masa Corporal Actual</h3>
@@ -148,21 +178,21 @@ export default function UpdateMetricsPage() {
           </div>
         </div>
 
-        <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-[2.5rem]">
+        <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-3xl">
           <div className="flex items-center gap-3 mb-8">
             <Ruler className="text-slate-500" size={20} />
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-slate-300">Aislamiento Muscular (cm)</h3>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
-            {Object.keys(metrics).filter(k => k !== 'peso').map((key) => (
+            {metricKeys.map((key) => (
               <div key={key} className="flex flex-col gap-2 group text-left">
                 <label className="text-[9px] uppercase font-black text-slate-600 tracking-widest group-focus-within:text-cyan-500 transition-colors ml-1">
                   {key}
                 </label>
                 <input 
                   type="number"
-                  value={(metrics as any)[key]}
+                  value={metrics[key]}
                   onChange={(e) => setMetrics({...metrics, [key]: e.target.value})}
                   className="bg-slate-950/50 border border-slate-800 p-3 rounded-xl text-white focus:border-cyan-500 outline-none text-sm transition-all"
                   placeholder="--"

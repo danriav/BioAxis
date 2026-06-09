@@ -45,7 +45,7 @@ export function Sidebar() {
             animate={{ opacity: 1 }}
             className="text-xl font-black bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent"
           >
-            BIOAXIS
+            KALOS
           </motion.span>
         )}
         <button 

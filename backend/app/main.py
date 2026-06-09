@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,7 +15,19 @@ from app.schemas.nutrition_api import (
     SyncNutritionDayRequest,
     SyncNutritionDayResponse,
 )
+from app.schemas.kalos_training import (
+    KalosAnthropometricBuckets,
+    KalosExerciseSubstitutionRequest,
+    KalosExerciseSubstitutionResponse,
+    KalosTrainingPlanRequest,
+    KalosTrainingPlanResponse,
+)
 from app.services.hypertrophy_engine import HypertrophyEngineService, UserBiometrics
+from app.services.kalos_training_engine import (
+    KalosTrainingEngine,
+    KalosTrainingEngineError,
+    load_kalos_catalog_csv,
+)
 
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
@@ -43,6 +56,150 @@ key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 if not url or not key:
     raise RuntimeError("Supabase backend credentials are not configured")
 supabase: Client = create_client(url, key)
+
+
+KALOS_CATALOG_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "docs"
+    / "training-data"
+    / "kalos_exercise_taxonomy_seed.csv"
+)
+
+
+@lru_cache(maxsize=1)
+def get_kalos_training_engine() -> KalosTrainingEngine:
+    return KalosTrainingEngine(load_kalos_catalog_csv(KALOS_CATALOG_PATH))
+
+
+def get_current_athlete_biometrics(current_user_id: str) -> dict | None:
+    result = (
+        supabase.table("dim_atleta")
+        .select("genero, peso, altura, hombros, cintura, cadera, gluteo")
+        .eq("user_id", current_user_id)
+        .eq("is_current", True)
+        .execute()
+    )
+    if not result.data:
+        return None
+    return result.data[0]
+
+
+def derive_kalos_biometric_context(row: dict) -> tuple[str, KalosAnthropometricBuckets]:
+    genero = str(row.get("genero") or "").lower()
+    sex_reference = "male" if genero == "hombre" else "female" if genero == "mujer" else "neutral"
+    height = _optional_float(row.get("altura"))
+    weight = _optional_float(row.get("peso"))
+    waist = _optional_float(row.get("cintura"))
+    shoulders = _optional_float(row.get("hombros"))
+    hips = _optional_float(row.get("cadera"))
+    glutes = _optional_float(row.get("gluteo"))
+    bmi = weight / ((height / 100) ** 2) if height and weight else None
+
+    ratio_type = "none"
+    ratio_gap_bucket = "unknown"
+    if sex_reference == "male" and shoulders and waist:
+        ratio_type = "golden_ratio"
+        ratio_gap_bucket = _ratio_gap_bucket((shoulders / waist), target=1.55)
+    elif sex_reference == "female" and waist and (hips or glutes):
+        ratio_type = "hourglass_ratio"
+        ratio_gap_bucket = _female_ratio_gap_bucket(
+            hip_to_waist=(hips / waist) if hips else None,
+            glute_to_waist=(glutes / waist) if glutes else None,
+        )
+    elif sex_reference != "neutral":
+        ratio_gap_bucket = "unknown"
+
+    return sex_reference, KalosAnthropometricBuckets(
+        height_bucket_cm=_height_bucket(height),
+        weight_bucket_kg=_weight_bucket(weight),
+        bmi_bucket=_bmi_bucket(bmi),
+        ratio_type=ratio_type,
+        ratio_gap_bucket=ratio_gap_bucket,
+    )
+
+
+def apply_db_biometric_context(
+    request: KalosTrainingPlanRequest,
+    current_user_id: str,
+) -> KalosTrainingPlanRequest:
+    biometrics = get_current_athlete_biometrics(current_user_id)
+    if not biometrics:
+        return request
+    sex_reference, buckets = derive_kalos_biometric_context(biometrics)
+    return request.model_copy(
+        update={
+            "sex_reference": sex_reference,
+            "anthropometric_buckets": buckets,
+        }
+    )
+
+
+def _optional_float(value) -> float | None:
+    if value is None:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _ratio_gap_bucket(actual_ratio: float, *, target: float) -> str:
+    gap = max(0.0, target - actual_ratio)
+    if gap < 0.05:
+        return "low"
+    if gap < 0.12:
+        return "moderate"
+    if gap < 0.2:
+        return "high"
+    return "very_high"
+
+
+def _female_ratio_gap_bucket(
+    *,
+    hip_to_waist: float | None,
+    glute_to_waist: float | None,
+) -> str:
+    buckets = []
+    if hip_to_waist is not None:
+        buckets.append(_ratio_gap_bucket(hip_to_waist, target=1.35))
+    if glute_to_waist is not None:
+        buckets.append(_ratio_gap_bucket(glute_to_waist, target=1.45))
+    if not buckets:
+        return "unknown"
+    severity = {"unknown": 0, "low": 1, "moderate": 2, "high": 3, "very_high": 4}
+    return max(buckets, key=lambda bucket: severity[bucket])
+
+
+def _height_bucket(height: float | None) -> str | None:
+    if height is None:
+        return None
+    if height < 160:
+        return "short"
+    if height <= 185:
+        return "average"
+    return "tall"
+
+
+def _weight_bucket(weight: float | None) -> str | None:
+    if weight is None:
+        return None
+    if weight < 60:
+        return "light"
+    if weight <= 90:
+        return "average"
+    return "heavy"
+
+
+def _bmi_bucket(bmi: float | None) -> str | None:
+    if bmi is None:
+        return None
+    if bmi < 18.5:
+        return "underweight"
+    if bmi < 25:
+        return "normal"
+    if bmi < 30:
+        return "overweight"
+    return "obese"
 
 
 def get_current_user_id(authorization: str | None = Header(default=None)) -> str:
@@ -187,6 +344,46 @@ async def get_bio_targets(
         "carbs": target.carbs_g,
         "fat": target.fat_g,
     }
+
+
+@app.post("/training/kalos/preview", response_model=KalosTrainingPlanResponse)
+async def preview_kalos_training_plan(
+    request: KalosTrainingPlanRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    engine: KalosTrainingEngine = Depends(get_kalos_training_engine),
+):
+    request = apply_db_biometric_context(request, current_user_id)
+    try:
+        return engine.generate(request)
+    except KalosTrainingEngineError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": exc.code,
+                "message": exc.message,
+                "validation_errors": list(exc.validation_errors),
+            },
+        ) from exc
+
+
+@app.post("/training/kalos/substitute", response_model=KalosExerciseSubstitutionResponse)
+async def substitute_kalos_training_exercise(
+    request: KalosExerciseSubstitutionRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    engine: KalosTrainingEngine = Depends(get_kalos_training_engine),
+):
+    _ = current_user_id
+    try:
+        return engine.substitute_exercise(request)
+    except KalosTrainingEngineError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": exc.code,
+                "message": exc.message,
+                "validation_errors": list(exc.validation_errors),
+            },
+        ) from exc
 
 
 if __name__ == "__main__":

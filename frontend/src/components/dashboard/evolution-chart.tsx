@@ -8,9 +8,59 @@ import {
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { Loader2, Info, AlertTriangle } from "lucide-react";
 
+type RawAthleteEntry = {
+  created_at?: string | null;
+  valid_from?: string | null;
+  peso?: number | null;
+  hombros?: number | null;
+  cintura?: number | null;
+  cadera?: number | null;
+  brazo?: number | null;
+  pantorrilla?: number | null;
+  genero?: string | null;
+};
+
+export type EvolutionDataPoint = {
+  uid: string;
+  fecha: string;
+  peso: number;
+  ratioSimetria: number;
+  ratioCurvatura: number;
+  hombros: number;
+  cintura: number;
+  cadera: number;
+  brazo: number;
+  pantorrilla: number;
+  genero: string;
+};
+
+type AthleteStatus = {
+  label: string;
+  color: string;
+  desc: string;
+};
+
+type TooltipPayload = {
+  payload: EvolutionDataPoint;
+};
+
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string | number;
+};
+
+type ChartMouseMove = {
+  activePayload?: TooltipPayload[];
+};
+
+const hasChartPayload = (value: unknown): value is ChartMouseMove => (
+  typeof value === "object" && value !== null && "activePayload" in value
+);
+
 // ... (getAthleteStatus y CustomTooltip se mantienen igual) ...
-const getAthleteStatus = (data: any) => {
-  if (!data) return { label: "SIN DATOS", color: "bg-slate-800 text-slate-500", desc: "Completa tu perfil." };
+const getAthleteStatus = (data: EvolutionDataPoint | undefined): AthleteStatus => {
+  if (!data) return { label: "Sin registro", color: "bg-slate-800 text-slate-500", desc: "Completa tu perfil." };
   const whr = data.ratioCurvatura;
   const gender = data.genero;
   if (gender === 'mujer' && data.brazo > 42 && data.peso < 70) {
@@ -24,7 +74,7 @@ const getAthleteStatus = (data: any) => {
   return { label: "ATLETA", color: "bg-slate-800 text-white", desc: "Analizando evolución..." };
 };
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     const cleanLabel = typeof label === 'string' ? label.split('_')[0] : label;
@@ -48,8 +98,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 // 🛑 ACEPTAMOS onHover Y activeData
-export function EvolutionChart({ onHover, activeData }: { onHover: (data: any | null) => void, activeData: any }) {
-  const [evolutionData, setEvolutionData] = useState<any[]>([]);
+export function EvolutionChart({ onHover, activeData }: { onHover: (data: EvolutionDataPoint | null) => void, activeData: Partial<EvolutionDataPoint> | null }) {
+  const [evolutionData, setEvolutionData] = useState<EvolutionDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -60,23 +110,26 @@ export function EvolutionChart({ onHover, activeData }: { onHover: (data: any | 
       if (!user) return;
       const { data } = await supabase.from('dim_atleta').select('*').eq('user_id', user.id).order('created_at', { ascending: true });
       if (data && data.length > 0) {
-        const formatted = data.map((entry, index) => {
-          const simetria = entry.genero === 'mujer' ? (entry.hombros / entry.cadera) : (entry.hombros / entry.cintura);
-          const curvatura = entry.genero === 'mujer' ? (entry.cintura / entry.cadera) : 0;
-          const dateObj = new Date(entry.created_at || entry.valid_from);
+        const formatted = (data as RawAthleteEntry[]).map((entry, index) => {
+          const hombros = entry.hombros || 0;
+          const cintura = entry.cintura || 0;
+          const cadera = entry.cadera || 0;
+          const simetria = entry.genero === 'mujer' ? (hombros / cadera) : (hombros / cintura);
+          const curvatura = entry.genero === 'mujer' ? (cintura / cadera) : 0;
+          const dateObj = new Date(entry.created_at || entry.valid_from || Date.now());
           const fechaBase = `${String(dateObj.getUTCDate()).padStart(2, '0')}/${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}`;
           return {
             uid: `${fechaBase}_${index}`,
             fecha: fechaBase,
-            peso: entry.peso,
+            peso: entry.peso || 0,
             ratioSimetria: Number(simetria.toFixed(2)) || 0,
             ratioCurvatura: Number(curvatura.toFixed(2)) || 0,
-            hombros: entry.hombros,
-            cintura: entry.cintura,
-            cadera: entry.cadera,
-            brazo: entry.brazo,
-            pantorrilla: entry.pantorrilla,
-            genero: entry.genero
+            hombros,
+            cintura,
+            cadera,
+            brazo: entry.brazo || 0,
+            pantorrilla: entry.pantorrilla || 0,
+            genero: entry.genero || ""
           };
         });
         setEvolutionData(formatted);
@@ -92,7 +145,7 @@ export function EvolutionChart({ onHover, activeData }: { onHover: (data: any | 
 
   return (
     <div className="flex flex-col gap-6 w-full">
-      <div className="w-full bg-slate-900/40 backdrop-blur-md rounded-[3.5rem] border border-slate-800 p-8 md:p-10 shadow-2xl">
+      <div className="w-full bg-slate-900/40 backdrop-blur-md rounded-3xl border border-slate-800 p-8 md:p-10 shadow-2xl">
         <div className="flex justify-between items-start mb-8">
           <div>
             <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Análisis <span className="text-cyan-500">Bio-Estético</span></h3>
@@ -109,8 +162,8 @@ export function EvolutionChart({ onHover, activeData }: { onHover: (data: any | 
           <ResponsiveContainer width="100%" height="100%">
             <LineChart 
               data={evolutionData}
-              onMouseMove={(e: any) => {
-                if (e && e.activePayload && e.activePayload.length > 0) {
+              onMouseMove={(e: unknown) => {
+                if (hasChartPayload(e) && e.activePayload && e.activePayload.length > 0) {
                   onHover(e.activePayload[0].payload);
                 }
               }}
@@ -148,18 +201,18 @@ export function EvolutionChart({ onHover, activeData }: { onHover: (data: any | 
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* ... (Info e Alert de abajo se mantienen igual) ... */}
-        <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-[2.5rem] flex gap-4 items-start">
+        <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-2xl flex gap-4 items-start">
           <div className="p-3 bg-cyan-500/10 rounded-2xl text-cyan-400"><Info size={20} /></div>
           <div>
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500 mb-1">Hourglass (Ideal: 0.70)</h4>
-            <p className="text-xs text-slate-400">Ratio cintura/cadera. Define la profundidad de la silueta femenina.</p>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-cyan-500 mb-1">X-Frame (Ideal: 1.00)</h4>
+            <p className="text-xs text-slate-400">Relación hombros/cadera. Busca la simetría total de la estructura.</p>
           </div>
         </div>
-        <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-[2.5rem] flex gap-4 items-start">
+        <div className="bg-slate-900/60 border border-slate-800 p-6 rounded-2xl flex gap-4 items-start">
           <div className="p-3 bg-rose-500/10 rounded-2xl text-rose-400"><AlertTriangle size={20} /></div>
           <div>
-            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mb-1">X-Frame (Ideal: 1.00)</h4>
-            <p className="text-xs text-slate-400">Relación hombros/cadera. Busca la simetría total de la estructura.</p>
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-500 mb-1">Hourglass (Ideal: 0.70)</h4>
+            <p className="text-xs text-slate-400">Ratio cintura/cadera. Define la profundidad de la silueta femenina.</p>
           </div>
         </div>
       </div>

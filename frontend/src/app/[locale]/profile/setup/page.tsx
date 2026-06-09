@@ -14,7 +14,7 @@ export default function ProfileSetupPage() {
           Configuración de <span className="text-cyan-500">Biotipo</span>
         </h1>
         <p className="text-slate-400 max-w-lg mx-auto font-medium">
-          Completa el escaneo perimetral para que BioAxis Engine adapte tu volumen de entrenamiento y macros.
+          Completa el escaneo perimetral para que Kalos Engine adapte tu volumen de entrenamiento y macros.
         </p>
       </div>
 
@@ -23,7 +23,7 @@ export default function ProfileSetupPage() {
       </div>
       
       <footer className="mt-12 text-slate-600 text-[10px] font-bold uppercase tracking-[0.2em]">
-        BioAxis v1.0 • Sistema de Optimización Biomecánica
+        Kalos v1.0 • Sistema de Optimización Biomecánica
       </footer>
     </div>
   );

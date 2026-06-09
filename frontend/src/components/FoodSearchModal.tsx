@@ -178,7 +178,7 @@ export function FoodSearchModal({
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <NutrientCard label="Calorias" value={analysis?.kcal} unit="kcal" color="text-white" icon={<Zap size={12} />} />
-                <NutrientCard label="Proteina" value={analysis?.protein} unit="g" color="text-fuchsia-500" icon={<Activity size={12} />} />
+                <NutrientCard label="Proteína" value={analysis?.protein} unit="g" color="text-fuchsia-500" icon={<Activity size={12} />} />
                 <NutrientCard label="Carbos" value={analysis?.carbs} unit="g" color="text-cyan-500" />
                 <NutrientCard label="Grasas" value={analysis?.fat} unit="g" color="text-yellow-500" />
               </div>

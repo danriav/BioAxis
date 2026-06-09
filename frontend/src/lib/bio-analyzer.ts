@@ -1,7 +1,7 @@
 import { BioProfile } from "@/types/types";
 
 export function analyzeSymmetry(profile: BioProfile) {
-  const { medidas, peso, altura } = profile;
+  const { medidas } = profile;
   
   // 1. Cálculo del V-Taper (Hombros / Cintura)
   const vTaper = medidas.hombros / medidas.cintura;

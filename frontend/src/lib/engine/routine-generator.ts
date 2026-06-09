@@ -14,11 +14,44 @@ export interface RoutineParams {
   focus: RoutineFocus;
   fitnessLevel: string;
   gender: string;
-  bioMetrics: any;
+  bioMetrics: BioMetrics | null;
   height: number;
   timeBudgetMins: number;
   catalog: CatalogExercise[];
 }
+
+export type BioMetrics = {
+  hombros?: number | null;
+  cintura?: number | null;
+  cadera?: number | null;
+};
+
+type DayStructure = {
+  label: string;
+  muscles: string[];
+};
+
+export type GeneratedExercise = Partial<Omit<CatalogExercise, "biomechanical_bias">> & {
+  id: string;
+  name_es: string;
+  sets: number;
+  reps: string;
+  rest: number;
+  rir: number | string;
+  notes?: string;
+  biomechanical_bias?: string;
+};
+
+export type GeneratedRoutineDay = {
+  dayLabel: string;
+  exercises: GeneratedExercise[];
+  totalDayMins: number;
+};
+
+export type GeneratedRoutine = {
+  generatedPlan: GeneratedRoutineDay[];
+  bioMsg: string;
+};
 
 export class AITrainingEngine {
   private getDailySeriesLimit(mins: number): number {
@@ -30,9 +63,9 @@ export class AITrainingEngine {
   }
 
   // 🟢 MAPA MAESTRO DE SPLITS (1 a 7 días sin repeticiones)
-  private getDayStructure(dayIdx: number, daysPerWeek: number) {
-    const splits: Record<number, any[]> = {
-      1: [{ label: "Full Body Alpha", muscles: ['Glúteos', 'Pecho', 'Espalda', 'Cuádriceps', 'Hombros'] }],
+  private getDayStructure(dayIdx: number, daysPerWeek: number): DayStructure {
+    const splits: Record<number, DayStructure[]> = {
+      1: [{ label: "Full Body Kalos", muscles: ['Glúteos', 'Pecho', 'Espalda', 'Cuádriceps', 'Hombros'] }],
       2: [
         { label: "Tren Inferior (Base)", muscles: ['Cuádriceps', 'Glúteos', 'Femorales'] },
         { label: "Tren Superior (Base)", muscles: ['Pecho', 'Espalda', 'Hombros'] }
@@ -78,15 +111,15 @@ export class AITrainingEngine {
     return currentSplit[dayIdx % currentSplit.length];
   }
 
-  generate(params: RoutineParams) {
+  generate(params: RoutineParams): GeneratedRoutine {
     const { daysPerWeek, gender, bioMetrics, timeBudgetMins, catalog } = params;
     const priorities = this.calculateAestheticPriorities(bioMetrics, gender);
     const dailySeriesLimit = this.getDailySeriesLimit(timeBudgetMins);
     
-    const generatedPlan = [];
+    const generatedPlan: GeneratedRoutineDay[] = [];
     for (let i = 0; i < daysPerWeek; i++) {
       const structure = this.getDayStructure(i, daysPerWeek);
-      let dayExercises = this.fillSessionToBudget(structure.muscles, dailySeriesLimit, catalog, priorities);
+      const dayExercises = this.fillSessionToBudget(structure.muscles, dailySeriesLimit, catalog, priorities);
       
       // 🟢 INYECCIÓN DE CARDIO (Si el tiempo es > 90 min)
       if (timeBudgetMins >= 90) {
@@ -103,8 +136,9 @@ export class AITrainingEngine {
     return { generatedPlan, bioMsg: this.generateBioMessage(priorities, gender) };
   }
 
-  private fillSessionToBudget(targetMuscles: string[], limit: number, catalog: any[], priorities: any) {
-    let sessionEx: any[] = [];
+  private fillSessionToBudget(targetMuscles: string[], limit: number, catalog: CatalogExercise[], _priorities: Record<string, string>): GeneratedExercise[] {
+    void _priorities;
+    const sessionEx: GeneratedExercise[] = [];
     let currentSeries = 0;
     let mIdx = 0;
 
@@ -126,14 +160,16 @@ export class AITrainingEngine {
     return sessionEx;
   }
 
-  private getScientificParams(muscle: string, bias: string) {
+  private getScientificParams(muscle: string, _bias: string) {
+    void _bias;
     if (['Cuádriceps', 'Pecho', 'Espalda', 'Glúteos'].includes(muscle)) {
       return { reps: "6-8", rest: 180, rir: 1, notes: "Tensión mecánica máxima. Rango pesado." };
     }
     return { reps: "10-12", rest: 120, rir: 0, notes: "Enfoque metabólico y control." };
   }
 
-  private getVirtualCardio(metrics: any) {
+  private getVirtualCardio(_metrics: BioMetrics | null): GeneratedExercise {
+    void _metrics;
     return {
       id: "cardio-virtual",
       name_es: "Caminadora (Inclinación)",
@@ -146,16 +182,20 @@ export class AITrainingEngine {
     };
   }
 
-  private calculateAestheticPriorities(metrics: any, gender: string) {
+  private calculateAestheticPriorities(metrics: BioMetrics | null, gender: string): Record<string, string> {
     const p: Record<string, string> = {};
     if (!metrics) return p;
-    const ratio = gender === 'hombre' ? metrics.hombros / metrics.cintura : metrics.cintura / metrics.cadera;
-    if (gender === 'hombre' && ratio < 1.6) { p['Hombros'] = 'ALPHA'; p['Espalda'] = 'ALPHA'; }
-    if (gender === 'mujer' && ratio > 0.7) { p['Glúteos'] = 'ALPHA'; p['Hombros'] = 'ALPHA'; }
+    const hombros = metrics.hombros as number;
+    const cintura = metrics.cintura as number;
+    const cadera = metrics.cadera as number;
+    const ratio = gender === 'hombre' ? hombros / cintura : cintura / cadera;
+    if (gender === 'hombre' && ratio < 1.6) { p['Hombros'] = 'KALOS'; p['Espalda'] = 'KALOS'; }
+    if (gender === 'mujer' && ratio > 0.7) { p['Glúteos'] = 'KALOS'; p['Hombros'] = 'KALOS'; }
     return p;
   }
 
-  private generateBioMessage(priorities: any, gender: string) {
+  private generateBioMessage(priorities: Record<string, string>, _gender: string) {
+    void _gender;
     const alphas = Object.keys(priorities);
     return alphas.length > 0 ? `Priorizando ${alphas.join(' y ')} para ajustar tu ratio.` : "Estructura balanceada.";
   }

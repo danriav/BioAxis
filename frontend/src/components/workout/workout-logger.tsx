@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Loader2, MessageSquare, CheckCircle2, Meh, Flame, Plus, AlertCircle, Clock,
-  Trash2, Edit3, Repeat, Layers, Timer, Target, HelpCircle, ChevronDown
+  Trash2, Edit3, Repeat, Layers, Timer, Target, HelpCircle, ChevronDown, type LucideIcon
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { registerWorkout } from "@/lib/actions/workout";
@@ -27,6 +27,7 @@ interface PlannedExercise extends Exercise {
 }
 
 type EffortLevel = 'facil' | 'optimo' | 'dificil' | null;
+type EditableExerciseField = "sets" | "reps" | "rir" | "rest" | "notes";
 
 // --- CONSTANTES ---
 const WEEK_DAYS = [
@@ -42,7 +43,7 @@ const WEEK_DAYS = [
 // ========================================================
 // 🟢 COMPONENTE TOOLTIP (Independiente con Named Groups)
 // ========================================================
-const TooltipLabel = ({ text, tooltipText, icon: Icon, iconColor }: { text: string, tooltipText: string, icon: any, iconColor: string }) => (
+const TooltipLabel = ({ text, tooltipText, icon: Icon, iconColor }: { text: string, tooltipText: string, icon: LucideIcon, iconColor: string }) => (
   <div className="relative group/tooltip flex items-center gap-1 w-fit cursor-help">
     <label className="text-[9px] uppercase font-black text-slate-500 tracking-widest flex items-center gap-1 cursor-help">
       <Icon size={10} className={iconColor} /> {text}
@@ -62,7 +63,7 @@ const TooltipLabel = ({ text, tooltipText, icon: Icon, iconColor }: { text: stri
 export function WorkoutLogger() {
   // --- ESTADOS DE DATOS ---
   const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
   const [dbError, setDbError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -109,7 +110,7 @@ export function WorkoutLogger() {
       const savedTitles = localStorage.getItem("bioaxis_day_titles");
       if (savedDays) setPlannedDays(JSON.parse(savedDays));
       if (savedTitles) setDayTitles(JSON.parse(savedTitles));
-    } catch (e) {
+    } catch {
       console.warn("Error al hidratar");
     } finally {
       setIsHydrated(true); // Permitir el guardado a partir de ahora
@@ -140,7 +141,7 @@ export function WorkoutLogger() {
 
   // --- AGRUPAMIENTO PARA EL ACORDEÓN ---
   const groupedExercises = exercises.reduce((acc, ex) => {
-    const mg = ex.muscle_groups as any;
+    const mg = ex.muscle_groups;
     const groupName = Array.isArray(mg) ? mg[0]?.display_name_es : mg?.display_name_es;
     const group = groupName || "Otros";
     if (!acc[group]) acc[group] = [];
@@ -162,10 +163,10 @@ export function WorkoutLogger() {
     setPlannedDays(prev => ({ ...prev, [activeDay]: prev[activeDay].filter((_, i) => i !== idx) }));
   };
 
-  const updateExerciseParam = (idx: number, field: keyof PlannedExercise, value: string | number) => {
+  const updateExerciseParam = (idx: number, field: EditableExerciseField, value: string | number) => {
     setPlannedDays(prev => {
       const updatedDay = [...prev[activeDay]];
-      updatedDay[idx] = { ...updatedDay[idx], [field]: value };
+      updatedDay[idx] = { ...updatedDay[idx], [field]: value } as PlannedExercise;
       return { ...prev, [activeDay]: updatedDay };
     });
   };
@@ -184,7 +185,7 @@ export function WorkoutLogger() {
       });
       setStatus({ type: 'success', msg: `¡Entrenamiento guardado!` });
       setTimeout(() => setStatus(null), 3000);
-    } catch (err: any) {
+    } catch {
       setStatus({ type: 'error', msg: `Error al registrar` });
     } finally {
       setLoading(false);
@@ -233,11 +234,11 @@ export function WorkoutLogger() {
         </div>
       </div>
 
-      {/* 🟢 ALERTA BIOAXIS */}
+      {/* 🟢 ALERTA KALOS */}
       <div className="p-4 rounded-2xl bg-cyan-500/5 border-l-4 border-cyan-500 flex items-start gap-3">
         <div className="p-2 bg-cyan-500/20 rounded-lg text-cyan-400"><AlertCircle size={18} /></div>
         <div>
-          <p className="text-[10px] uppercase font-black text-cyan-500 tracking-widest mb-1">Análisis BioAxis</p>
+          <p className="text-[10px] uppercase font-black text-cyan-500 tracking-widest mb-1">Análisis Kalos</p>
           <p className="text-xs text-slate-300 font-medium leading-relaxed">{biomechanicalWarning || "Estructura Óptima. Selección balanceada."}</p>
         </div>
       </div>

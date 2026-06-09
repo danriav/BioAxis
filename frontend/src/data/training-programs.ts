@@ -1,4 +1,19 @@
-export const TRAINING_DATA: any = {
+type TrainingProgramExercise = {
+  name: string;
+  muscle: string;
+  sets: string;
+  reps: string;
+  rir: string;
+  rest: string;
+};
+
+type TrainingProgramDay = {
+  title: string;
+  focus: string;
+  exercises: TrainingProgramExercise[];
+};
+
+export const TRAINING_DATA: Record<string, Record<number, TrainingProgramDay[]>> = {
     female: {
       5: [
         { title: "Día 1: Inferior", focus: "Cuádriceps / Glúteo", exercises: [

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "exercise_hip_thrust",
+    "canonical_name": "Hip thrust",
+    "equipment_type": "barbell",
+    "movement_pattern": "hinge",
+    "primary_muscle_group": 2,
+    "joint_complexity": 3,
+    "allows_glute_focus": true,
+    "allows_quad_focus": false
+  },
+  {
+    "id": "exercise_bench_press",
+    "canonical_name": "Bench press",
+    "equipment_type": "barbell",
+    "movement_pattern": "push_horizontal",
+    "primary_muscle_group": 4,
+    "joint_complexity": 3,
+    "allows_glute_focus": false,
+    "allows_quad_focus": false
+  },
+  {
+    "id": "exercise_leg_extension",
+    "canonical_name": "Leg extension",
+    "equipment_type": "machine",
+    "movement_pattern": "isolation",
+    "primary_muscle_group": 1,
+    "joint_complexity": 1,
+    "allows_glute_focus": false,
+    "allows_quad_focus": true
+  },
+  {
+    "id": "exercise_band_row",
+    "canonical_name": "Band row",
+    "equipment_type": "resistance_band",
+    "movement_pattern": "pull_horizontal",
+    "primary_muscle_group": 5,
+    "joint_complexity": 2,
+    "allows_glute_focus": false,
+    "allows_quad_focus": false
+  },
+  {
+    "id": "exercise_incomplete",
+    "canonical_name": "Incomplete exercise",
+    "equipment_type": null,
+    "movement_pattern": null,
+    "primary_muscle_group": null,
+    "joint_complexity": null,
+    "allows_glute_focus": false,
+    "allows_quad_focus": false
+  },
+  {
+    "id": "exercise_unsupported",
+    "canonical_name": "Unsupported implement",
+    "equipment_type": "kettlebell",
+    "movement_pattern": "carry",
+    "primary_muscle_group": 3,
+    "joint_complexity": 2,
+    "allows_glute_focus": false,
+    "allows_quad_focus": false
+  }
+]

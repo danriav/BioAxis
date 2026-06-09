@@ -1,0 +1,150 @@
+{
+  "request": {
+    "days_per_week": 3,
+    "goal": "hypertrophy",
+    "priority": "torso",
+    "experience": "intermediate",
+    "time_budget_minutes": 60,
+    "available_equipment": ["barbell", "dumbbell", "machine", "cable", "bench"],
+    "constraints": {
+      "pain_areas": ["shoulder"],
+      "excluded_movement_patterns": ["vertical_push"]
+    }
+  },
+  "plan": {
+    "contract_version": "kalos_training_plan.v1",
+    "plan_id": "plan_fixture_pain_restriction_fail",
+    "input_summary": {
+      "days_per_week": 3,
+      "goal": "hypertrophy",
+      "priority": "torso",
+      "experience": "intermediate",
+      "time_budget_minutes": 60,
+      "equipment_scope": ["barbell", "dumbbell", "machine", "cable", "bench"],
+      "constraints_applied": ["shoulder_pain", "vertical_push_excluded"]
+    },
+    "program": {
+      "name": "Invalid shoulder stress plan",
+      "duration_weeks": 8,
+      "split": ["Push", "Pull", "Legs"],
+      "weekly_volume_targets": {
+        "shoulders": 4,
+        "back": 4,
+        "quads": 4
+      },
+      "progression": {
+        "model": "double_progression",
+        "weeks": 8,
+        "rir_start": 2,
+        "rir_end": 1,
+        "deload_week": 5,
+        "load_rule": "This fixture should fail before progression matters."
+      },
+      "sessions": [
+        {
+          "session_id": "session_1",
+          "day_number": 1,
+          "label": "Push",
+          "intent": "shoulder_heavy",
+          "target_muscles": ["shoulders"],
+          "estimated_minutes": 55,
+          "fatigue_points": 3,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_barbell_overhead_press",
+              "exercise_name": "Barbell overhead press",
+              "primary_muscle": "shoulders",
+              "secondary_muscles": ["triceps"],
+              "movement_pattern": "vertical_push",
+              "role": "anchor",
+              "sets": 4,
+              "rep_range": {"min": 6, "max": 8},
+              "rir_target": {"min": 1, "max": 2},
+              "rest_seconds": 180,
+              "fatigue_cost": "high",
+              "equipment": "barbell",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "vertical_push_shoulders",
+              "weekly_set_contribution": {"shoulders": 4},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        },
+        {
+          "session_id": "session_2",
+          "day_number": 2,
+          "label": "Pull",
+          "intent": "pull_moderate",
+          "target_muscles": ["back"],
+          "estimated_minutes": 50,
+          "fatigue_points": 2,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_chest_supported_row",
+              "exercise_name": "Chest supported row",
+              "primary_muscle": "back",
+              "secondary_muscles": ["biceps"],
+              "movement_pattern": "horizontal_pull",
+              "role": "anchor",
+              "sets": 4,
+              "rep_range": {"min": 8, "max": 12},
+              "rir_target": {"min": 2, "max": 3},
+              "rest_seconds": 120,
+              "fatigue_cost": "medium",
+              "equipment": "machine",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "row_back",
+              "weekly_set_contribution": {"back": 4},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        },
+        {
+          "session_id": "session_3",
+          "day_number": 3,
+          "label": "Legs",
+          "intent": "lower_moderate",
+          "target_muscles": ["quads"],
+          "estimated_minutes": 50,
+          "fatigue_points": 3,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_hack_squat",
+              "exercise_name": "Hack squat",
+              "primary_muscle": "quads",
+              "secondary_muscles": ["glutes"],
+              "movement_pattern": "squat",
+              "role": "anchor",
+              "sets": 4,
+              "rep_range": {"min": 8, "max": 10},
+              "rir_target": {"min": 1, "max": 2},
+              "rest_seconds": 150,
+              "fatigue_cost": "high",
+              "equipment": "machine",
+              "joint_stress": ["knee", "hip"],
+              "substitution_group": "squat_quad_glute",
+              "weekly_set_contribution": {"quads": 4},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        }
+      ]
+    },
+    "quality_checks": {
+      "status": "fail",
+      "warnings": [],
+      "volume_within_limits": true,
+      "frequency_within_limits": true,
+      "fatigue_within_limits": true,
+      "equipment_available": true,
+      "constraints_respected": false,
+      "duplicate_exercises_justified": true
+    }
+  }
+}

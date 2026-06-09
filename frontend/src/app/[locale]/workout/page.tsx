@@ -1,21 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { WorkoutLogger } from "@/components/workout/workout-logger";
 import { MagicRoutineGenerator } from "@/components/workout/magic-routine-generator";
 import { Dumbbell, Cpu } from "lucide-react"; // Asumiendo que usas lucide-react
 
 export default function TrainingCenterPage() {
-  const [activeTab, setActiveTab] = useState<"bio_dedicado" | "arquitecto">("bio_dedicado");
-
-  // Recordar la preferencia del usuario
-  useEffect(() => {
+  const [activeTab, setActiveTab] = useState<"bio_dedicado" | "arquitecto">(() => {
+    if (typeof window === "undefined") return "bio_dedicado";
     const pref = localStorage.getItem("bioaxis_training_preference");
-    if (pref === "arquitecto" || pref === "bio_dedicado") {
-      setActiveTab(pref);
-    }
-  }, []);
+    return pref === "arquitecto" || pref === "bio_dedicado" ? pref : "bio_dedicado";
+  });
 
   const handleTabChange = (tab: "bio_dedicado" | "arquitecto") => {
     setActiveTab(tab);
@@ -49,7 +45,7 @@ export default function TrainingCenterPage() {
             }`}
           >
             <Cpu size={18} className={activeTab === "bio_dedicado" ? "text-cyan-400" : ""} />
-            Bio-Dedicado (IA)
+            Preview Kalos
           </button>
           
           <button

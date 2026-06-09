@@ -13,7 +13,7 @@ const data = [
 
 export function SymmetryRadar() {
   return (
-    <div className="h-[300px] w-full bg-slate-900/50 backdrop-blur-xl rounded-[2.5rem] border border-slate-800 p-6">
+    <div className="h-[300px] w-full bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-slate-800 p-6">
       <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Análisis de Simetría</h3>
       <ResponsiveContainer width="100%" height="100%">
         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>

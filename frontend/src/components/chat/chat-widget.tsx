@@ -3,13 +3,18 @@
 import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from 'react-markdown';
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageSquare, X, Send, Sparkles, Bot, Loader2 } from "lucide-react";
+import { X, Send, Sparkles, Bot, Loader2 } from "lucide-react";
+
+type ChatMessage = {
+  role: "bot" | "user";
+  text: string;
+};
 
 export function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'bot', text: '¡Hola! Soy tu Bio-Copiloto. ¿En qué puedo ayudarte hoy?' }
   ]);
   
@@ -41,7 +46,7 @@ export function ChatWidget() {
 
       const data = await response.json();
       setMessages(prev => [...prev, { role: 'bot', text: data.text }]);
-    } catch (error) {
+    } catch {
       setMessages(prev => [...prev, { role: 'bot', text: "Lo siento, perdí la conexión con la base." }]);
     } finally {
       setIsTyping(false);
@@ -56,7 +61,7 @@ export function ChatWidget() {
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="absolute bottom-20 right-0 w-[350px] md:w-[400px] h-[500px] bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden"
+            className="absolute bottom-20 right-0 w-[350px] md:w-[400px] h-[500px] bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-3xl shadow-2xl flex flex-col overflow-hidden"
           >
             {/* HEADER */}
             <div className="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-800/30">

@@ -1,0 +1,242 @@
+{
+  "request": {
+    "days_per_week": 6,
+    "goal": "general_fitness",
+    "priority": "balanced",
+    "experience": "beginner",
+    "time_budget_minutes": 40,
+    "available_equipment": ["dumbbell", "bodyweight", "band"],
+    "constraints": {}
+  },
+  "plan": {
+    "contract_version": "kalos_training_plan.v1",
+    "plan_id": "plan_fixture_beginner_6_days_warning",
+    "input_summary": {
+      "days_per_week": 6,
+      "goal": "general_fitness",
+      "priority": "balanced",
+      "experience": "beginner",
+      "time_budget_minutes": 40,
+      "equipment_scope": ["dumbbell", "bodyweight", "band"],
+      "constraints_applied": []
+    },
+    "program": {
+      "name": "Beginner frecuencia alta controlada",
+      "duration_weeks": 8,
+      "split": ["Lower A", "Push", "Pull", "Lower B", "Core Recovery", "Mobility Cardio"],
+      "weekly_volume_targets": {
+        "quads": 3,
+        "chest": 3,
+        "back": 3,
+        "glutes": 3,
+        "core": 2
+      },
+      "progression": {
+        "model": "double_progression",
+        "weeks": 8,
+        "rir_start": 3,
+        "rir_end": 2,
+        "deload_week": 5,
+        "load_rule": "Progress only when all sessions feel technically consistent."
+      },
+      "sessions": [
+        {
+          "session_id": "session_1",
+          "day_number": 1,
+          "label": "Lower A",
+          "intent": "lower_technique",
+          "target_muscles": ["quads"],
+          "estimated_minutes": 32,
+          "fatigue_points": 3,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_goblet_squat",
+              "exercise_name": "Goblet squat",
+              "primary_muscle": "quads",
+              "secondary_muscles": ["glutes"],
+              "movement_pattern": "squat",
+              "role": "anchor",
+              "sets": 3,
+              "rep_range": {"min": 8, "max": 10},
+              "rir_target": {"min": 2, "max": 3},
+              "rest_seconds": 120,
+              "fatigue_cost": "high",
+              "equipment": "dumbbell",
+              "joint_stress": ["knee", "hip"],
+              "substitution_group": "squat_quad_glute",
+              "weekly_set_contribution": {"quads": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        },
+        {
+          "session_id": "session_2",
+          "day_number": 2,
+          "label": "Push",
+          "intent": "upper_push_light",
+          "target_muscles": ["chest"],
+          "estimated_minutes": 28,
+          "fatigue_points": 2,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_incline_dumbbell_press",
+              "exercise_name": "Incline dumbbell press",
+              "primary_muscle": "chest",
+              "secondary_muscles": ["triceps"],
+              "movement_pattern": "horizontal_push",
+              "role": "anchor",
+              "sets": 3,
+              "rep_range": {"min": 8, "max": 12},
+              "rir_target": {"min": 2, "max": 3},
+              "rest_seconds": 120,
+              "fatigue_cost": "medium",
+              "equipment": "dumbbell",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "horizontal_push_chest",
+              "weekly_set_contribution": {"chest": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        },
+        {
+          "session_id": "session_3",
+          "day_number": 3,
+          "label": "Pull",
+          "intent": "upper_pull_light",
+          "target_muscles": ["back"],
+          "estimated_minutes": 28,
+          "fatigue_points": 2,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_band_row",
+              "exercise_name": "Band row",
+              "primary_muscle": "back",
+              "secondary_muscles": ["biceps"],
+              "movement_pattern": "horizontal_pull",
+              "role": "anchor",
+              "sets": 3,
+              "rep_range": {"min": 10, "max": 15},
+              "rir_target": {"min": 2, "max": 3},
+              "rest_seconds": 90,
+              "fatigue_cost": "medium",
+              "equipment": "band",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "row_back",
+              "weekly_set_contribution": {"back": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        },
+        {
+          "session_id": "session_4",
+          "day_number": 4,
+          "label": "Lower B",
+          "intent": "glute_technique",
+          "target_muscles": ["glutes"],
+          "estimated_minutes": 30,
+          "fatigue_points": 2,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_dumbbell_glute_bridge",
+              "exercise_name": "Dumbbell glute bridge",
+              "primary_muscle": "glutes",
+              "secondary_muscles": ["hamstrings"],
+              "movement_pattern": "hip_thrust",
+              "role": "anchor",
+              "sets": 3,
+              "rep_range": {"min": 10, "max": 12},
+              "rir_target": {"min": 2, "max": 3},
+              "rest_seconds": 90,
+              "fatigue_cost": "medium",
+              "equipment": "dumbbell",
+              "joint_stress": ["hip"],
+              "substitution_group": "hip_thrust_glutes",
+              "weekly_set_contribution": {"glutes": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        },
+        {
+          "session_id": "session_5",
+          "day_number": 5,
+          "label": "Core Recovery",
+          "intent": "core_recovery",
+          "target_muscles": ["core"],
+          "estimated_minutes": 24,
+          "fatigue_points": 1,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_dead_bug",
+              "exercise_name": "Dead bug",
+              "primary_muscle": "core",
+              "secondary_muscles": [],
+              "movement_pattern": "core_stability",
+              "role": "warmup",
+              "sets": 2,
+              "rep_range": {"min": 8, "max": 12},
+              "rir_target": {"min": 3, "max": 4},
+              "rest_seconds": 45,
+              "fatigue_cost": "low",
+              "equipment": "bodyweight",
+              "joint_stress": [],
+              "substitution_group": "core_stability",
+              "weekly_set_contribution": {"core": 2},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        },
+        {
+          "session_id": "session_6",
+          "day_number": 6,
+          "label": "Mobility Cardio",
+          "intent": "mobility_cardio",
+          "target_muscles": ["core"],
+          "estimated_minutes": 25,
+          "fatigue_points": 1,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_bodyweight_cardio_liss",
+              "exercise_name": "Bodyweight LISS",
+              "primary_muscle": "core",
+              "secondary_muscles": [],
+              "movement_pattern": "cardio_liss",
+              "role": "cardio",
+              "sets": 1,
+              "rep_range": {"min": 20, "max": 30},
+              "rir_target": {"min": 3, "max": 4},
+              "rest_seconds": 60,
+              "fatigue_cost": "low",
+              "equipment": "bodyweight",
+              "joint_stress": ["ankle"],
+              "substitution_group": "cardio_liss",
+              "weekly_set_contribution": {},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        }
+      ]
+    },
+    "quality_checks": {
+      "status": "warning",
+      "warnings": ["beginner_high_frequency", "limited_equipment_substitutions"],
+      "volume_within_limits": true,
+      "frequency_within_limits": true,
+      "fatigue_within_limits": true,
+      "equipment_available": true,
+      "constraints_respected": true,
+      "duplicate_exercises_justified": true
+    }
+  }
+}
