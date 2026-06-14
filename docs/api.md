@@ -15,10 +15,11 @@ Contract validation status codes:
 
 - Missing or invalid bearer token: `401`.
 - Valid bearer token for `/nutrition/search`, `/nutrition/add-log`,
-  `/nutrition/sync-day`, and `/nutrition/targets/{user_id}` owned by the caller:
-  `200`.
+  `/nutrition/sync-day`, `/nutrition/logs`, `/nutrition/targets/me`, and
+  `/nutrition/targets/{user_id}` owned by the caller: `200`.
 - Authenticated request for another user's `/nutrition/targets/{user_id}`:
   `403`.
+- Client-supplied `user_id` on `/nutrition/targets/me`: `422`.
 - Request body with extra fields such as `user_id`: `422`.
 
 ## CORS
@@ -96,7 +97,147 @@ Authorization behavior:
 - Inserts `user_id` from the validated Supabase JWT.
 - Rejects request bodies with extra fields such as `user_id`.
 
-### `GET /nutrition/targets/{user_id}`
+### `GET /nutrition/logs`
+
+Returns the authenticated user's food logs for one day with catalog macros
+resolved per gram, daily totals, and meal grouping.
+
+Query parameters:
+
+- `date`: ISO date in `YYYY-MM-DD` format.
+
+Response model: `NutritionDayLogsResponse`
+
+```json
+{
+  "date": "2026-06-10",
+  "items": [
+    {
+      "id": "log-uuid",
+      "food_id": "food-uuid",
+      "food_name": "Avena",
+      "meal_slot": "desayuno",
+      "quantity_g": 100.0,
+      "consumed_at": "2026-06-10",
+      "kcal": 389.0,
+      "protein": 16.9,
+      "carbs": 66.3,
+      "fat": 6.9
+    }
+  ],
+  "totals": {
+    "kcal": 389.0,
+    "protein": 16.9,
+    "carbs": 66.3,
+    "fat": 6.9
+  },
+  "meals": {
+    "desayuno": [],
+    "comida": [],
+    "cena": [],
+    "snacks": []
+  }
+}
+```
+
+Authorization behavior:
+
+- Requires a valid bearer token.
+- Filters by `user_id` from the validated Supabase JWT.
+- Filters by `consumed_at = date`.
+- Does not accept `user_id` in query or body.
+- Client-supplied `user_id` returns `422`.
+- A day without logs returns `200` with `items: []` and zero totals.
+
+### `PATCH /nutrition/logs/{log_id}`
+
+Updates one authenticated user's logged food entry. This endpoint is intended
+for mobile corrections such as changing meal slot, grams, or date.
+
+Request model: `NutritionLogUpdateRequest`
+
+Allowed fields:
+
+- `meal_slot`: non-empty string.
+- `quantity_g`: number greater than `0`.
+- `target_date`: ISO date in `YYYY-MM-DD` format.
+- `consumed_at`: ISO date in `YYYY-MM-DD` format.
+
+Use either `target_date` or `consumed_at`, not both.
+
+```json
+{
+  "meal_slot": "cena",
+  "quantity_g": 125.0,
+  "target_date": "2026-06-12"
+}
+```
+
+Response model: `NutritionLogMutationResponse`
+
+```json
+{
+  "id": "log-uuid",
+  "food_id": "food-uuid",
+  "meal_slot": "cena",
+  "quantity_g": 125.0,
+  "consumed_at": "2026-06-12"
+}
+```
+
+Authorization behavior:
+
+- Requires a valid bearer token.
+- Updates only when `id = log_id` and `user_id` equals the authenticated user.
+- Does not accept `user_id` in query or body.
+- Client-supplied `user_id` returns `422`.
+- Missing or cross-user logs return `404`.
+- Extra fields return `422`.
+
+### `DELETE /nutrition/logs/{log_id}`
+
+Deletes one authenticated user's logged food entry.
+
+Response model: `NutritionLogDeleteResponse`
+
+```json
+{
+  "status": "success",
+  "deleted_id": "log-uuid"
+}
+```
+
+Authorization behavior:
+
+- Requires a valid bearer token.
+- Deletes only when `id = log_id` and `user_id` equals the authenticated user.
+- Does not accept `user_id` in query or body.
+- Client-supplied `user_id` returns `422`.
+- Missing or cross-user logs return `404`.
+
+### `GET /nutrition/targets/me`
+
+Returns macronutrient targets for the authenticated user. This is the preferred
+mobile contract because identity comes only from the bearer token.
+
+Response model: `NutritionTargetsResponse`
+
+```json
+{
+  "kcal": 2100,
+  "protein": 160,
+  "carbs": 220,
+  "fat": 70
+}
+```
+
+Authorization behavior:
+
+- Requires a valid bearer token.
+- Does not accept `user_id` in the path, query, or body.
+- Client-supplied `user_id` returns `422`.
+
+### `GET /nutrition/targets/{user_id}` legacy
 
 Returns macronutrient targets for the authenticated user.
 
@@ -115,6 +256,8 @@ Authorization behavior:
 
 - The path `user_id` must match the authenticated Supabase user id.
 - Cross-user access returns `403`.
+- Kept for web compatibility; new mobile clients should use
+  `/nutrition/targets/me`.
 
 ## AI NLP extraction service
 

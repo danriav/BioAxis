@@ -24,3 +24,22 @@ out/
 build/
 Rutinas_de_referencia/
 e2e-artifacts/
+frontend/.next-dev-*.log
+.tmp-video-review/
+*.uix
+*ui-dump*.xml
+.idea/
+
+# Expo / React Native mobile app
+mobile/.env
+mobile/.env.*
+!mobile/.env.example
+mobile/.expo/
+mobile/android/
+mobile/ios/
+mobile/dist/
+mobile/web-build/
+mobile/expo-env.d.ts
+*.apk
+*.aab
+*.keystore

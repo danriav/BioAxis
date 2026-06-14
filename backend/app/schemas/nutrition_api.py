@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 JsonDate = Annotated[date, Field(strict=False)]
@@ -60,6 +60,66 @@ class MealLogResponse(FlexibleResponse):
     meal_slot: str | None = None
     quantity_g: float | None = None
     consumed_at: date | str | None = None
+
+
+class NutritionLogFoodItem(StrictSchema):
+    id: str
+    food_id: str | None = None
+    food_name: str | None = None
+    meal_slot: str
+    quantity_g: float
+    consumed_at: JsonDate
+    kcal: float
+    protein: float
+    carbs: float
+    fat: float
+
+
+class NutritionDayTotals(StrictSchema):
+    kcal: float
+    protein: float
+    carbs: float
+    fat: float
+
+
+class NutritionDayLogsResponse(StrictSchema):
+    date: JsonDate
+    items: list[NutritionLogFoodItem]
+    totals: NutritionDayTotals
+    meals: dict[str, list[NutritionLogFoodItem]]
+
+
+class NutritionLogUpdateRequest(StrictSchema):
+    meal_slot: Annotated[str, Field(min_length=1, max_length=32)] | None = None
+    quantity_g: Annotated[float, Field(gt=0, le=10000)] | None = None
+    target_date: JsonDate | None = None
+    consumed_at: JsonDate | None = None
+
+    @model_validator(mode="after")
+    def validate_update_fields(self) -> "NutritionLogUpdateRequest":
+        if (
+            self.meal_slot is None
+            and self.quantity_g is None
+            and self.target_date is None
+            and self.consumed_at is None
+        ):
+            raise ValueError("At least one editable field is required")
+        if self.target_date is not None and self.consumed_at is not None:
+            raise ValueError("Use either target_date or consumed_at, not both")
+        return self
+
+
+class NutritionLogMutationResponse(StrictSchema):
+    id: str
+    food_id: str | None = None
+    meal_slot: str
+    quantity_g: float
+    consumed_at: JsonDate
+
+
+class NutritionLogDeleteResponse(StrictSchema):
+    status: Literal["success"]
+    deleted_id: str
 
 
 class NutritionTargetsResponse(StrictSchema):

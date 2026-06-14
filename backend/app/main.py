@@ -3,14 +3,21 @@ from functools import lru_cache
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import Client, create_client
 
 from app.schemas.nutrition_api import (
     FoodSearchItem,
+    JsonDate,
     MealLogRequest,
     MealLogResponse,
+    NutritionDayLogsResponse,
+    NutritionDayTotals,
+    NutritionLogDeleteResponse,
+    NutritionLogFoodItem,
+    NutritionLogMutationResponse,
+    NutritionLogUpdateRequest,
     NutritionTargetsResponse,
     SyncNutritionDayRequest,
     SyncNutritionDayResponse,
@@ -235,6 +242,136 @@ def get_current_user_id(authorization: str | None = Header(default=None)) -> str
     return str(user_id)
 
 
+async def reject_client_user_id(request: Request) -> None:
+    """Reject mobile contracts that try to provide ownership from the client."""
+
+    if "user_id" in request.query_params:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="user_id is not accepted on this endpoint",
+        )
+
+    body = await request.body()
+    if body and b"user_id" in body:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="user_id is not accepted on this endpoint",
+        )
+
+
+def calculate_nutrition_targets_for_user(current_user_id: str) -> NutritionTargetsResponse:
+    query = (
+        supabase.table("dim_atleta")
+        .select("genero, edad, peso, altura, objetivo_metabolico, dias_entrenamiento_semana")
+        .eq("user_id", current_user_id)
+        .eq("is_current", True)
+        .execute()
+    )
+
+    if not query.data:
+        return NutritionTargetsResponse(kcal=2100, protein=160, carbs=220, fat=70)
+
+    biometria = query.data[0]
+    genero = biometria["genero"].lower()
+    biological_sex = "male" if genero == "hombre" else "female"
+    target = HypertrophyEngineService().calculate_macro_targets(
+        UserBiometrics(
+            weight_kg=float(biometria["peso"]),
+            height_cm=float(biometria["altura"]),
+            age_years=int(biometria["edad"]),
+            biological_sex=biological_sex,
+            metabolic_goal=biometria.get("objetivo_metabolico", "maintenance"),
+            training_days_per_week=int(biometria.get("dias_entrenamiento_semana", 3)),
+        )
+    )
+
+    return NutritionTargetsResponse(
+        kcal=target.calories,
+        protein=target.protein_g,
+        carbs=target.carbs_g,
+        fat=target.fat_g,
+    )
+
+
+def _nutrition_float(value) -> float:
+    parsed = _optional_float(value)
+    return parsed if parsed is not None else 0.0
+
+
+def _nutrition_meal_group(meal_slot: str) -> str:
+    normalized = meal_slot.strip().lower()
+    mapping = {
+        "breakfast": "desayuno",
+        "desayuno": "desayuno",
+        "lunch": "comida",
+        "comida": "comida",
+        "dinner": "cena",
+        "cena": "cena",
+        "snack": "snacks",
+        "snacks": "snacks",
+    }
+    return mapping.get(normalized, normalized or "snacks")
+
+
+def build_nutrition_day_logs_response(
+    *,
+    log_date: JsonDate,
+    rows: list[dict],
+) -> NutritionDayLogsResponse:
+    items: list[NutritionLogFoodItem] = []
+    meals: dict[str, list[NutritionLogFoodItem]] = {
+        "desayuno": [],
+        "comida": [],
+        "cena": [],
+        "snacks": [],
+    }
+    totals = {"kcal": 0.0, "protein": 0.0, "carbs": 0.0, "fat": 0.0}
+
+    for row in rows:
+        food = row.get("catalog_foods") or {}
+        quantity_g = _nutrition_float(row.get("quantity_g"))
+        item = NutritionLogFoodItem(
+            id=str(row.get("id")),
+            food_id=str(row["food_id"]) if row.get("food_id") is not None else None,
+            food_name=food.get("name_es"),
+            meal_slot=str(row.get("meal_slot") or ""),
+            quantity_g=quantity_g,
+            consumed_at=row.get("consumed_at") or log_date,
+            kcal=round(_nutrition_float(food.get("calories_per_g")) * quantity_g, 2),
+            protein=round(_nutrition_float(food.get("protein_per_g")) * quantity_g, 2),
+            carbs=round(_nutrition_float(food.get("carbs_per_g")) * quantity_g, 2),
+            fat=round(_nutrition_float(food.get("fat_per_g")) * quantity_g, 2),
+        )
+        items.append(item)
+        meals.setdefault(_nutrition_meal_group(item.meal_slot), []).append(item)
+        totals["kcal"] += item.kcal
+        totals["protein"] += item.protein
+        totals["carbs"] += item.carbs
+        totals["fat"] += item.fat
+
+    return NutritionDayLogsResponse(
+        date=log_date,
+        items=items,
+        totals=NutritionDayTotals(
+            kcal=round(totals["kcal"], 2),
+            protein=round(totals["protein"], 2),
+            carbs=round(totals["carbs"], 2),
+            fat=round(totals["fat"], 2),
+        ),
+        meals=meals,
+    )
+
+
+def build_nutrition_log_mutation_response(row: dict) -> NutritionLogMutationResponse:
+    return NutritionLogMutationResponse(
+        id=str(row.get("id")),
+        food_id=str(row["food_id"]) if row.get("food_id") is not None else None,
+        meal_slot=str(row.get("meal_slot") or ""),
+        quantity_g=_nutrition_float(row.get("quantity_g")),
+        consumed_at=row.get("consumed_at"),
+    )
+
+
 @app.get("/nutrition/search", response_model=list[FoodSearchItem])
 async def search_food(
     query: str,
@@ -302,6 +439,91 @@ async def add_meal_log(
     raise HTTPException(status_code=500, detail="Error al insertar en la base de datos")
 
 
+@app.get("/nutrition/logs", response_model=NutritionDayLogsResponse)
+async def get_nutrition_logs_for_day(
+    date: JsonDate = Query(...),
+    current_user_id: str = Depends(get_current_user_id),
+    _: None = Depends(reject_client_user_id),
+):
+    result = (
+        supabase.table("nutrition_logs")
+        .select(
+            """
+            id,
+            food_id,
+            meal_slot,
+            quantity_g,
+            consumed_at,
+            catalog_foods (
+                name_es,
+                calories_per_g,
+                protein_per_g,
+                carbs_per_g,
+                fat_per_g
+            )
+            """
+        )
+        .eq("user_id", current_user_id)
+        .eq("consumed_at", str(date))
+        .execute()
+    )
+    return build_nutrition_day_logs_response(log_date=date, rows=result.data or [])
+
+
+@app.patch("/nutrition/logs/{log_id}", response_model=NutritionLogMutationResponse)
+async def update_nutrition_log(
+    log_id: str,
+    request: NutritionLogUpdateRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    _: None = Depends(reject_client_user_id),
+):
+    update_data = {}
+    if request.meal_slot is not None:
+        update_data["meal_slot"] = request.meal_slot
+    if request.quantity_g is not None:
+        update_data["quantity_g"] = request.quantity_g
+    next_date = request.consumed_at or request.target_date
+    if next_date is not None:
+        update_data["consumed_at"] = str(next_date)
+
+    result = (
+        supabase.table("nutrition_logs")
+        .update(update_data)
+        .eq("id", log_id)
+        .eq("user_id", current_user_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nutrition log not found")
+    return build_nutrition_log_mutation_response(result.data[0])
+
+
+@app.delete("/nutrition/logs/{log_id}", response_model=NutritionLogDeleteResponse)
+async def delete_nutrition_log(
+    log_id: str,
+    current_user_id: str = Depends(get_current_user_id),
+    _: None = Depends(reject_client_user_id),
+):
+    result = (
+        supabase.table("nutrition_logs")
+        .delete()
+        .eq("id", log_id)
+        .eq("user_id", current_user_id)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Nutrition log not found")
+    return NutritionLogDeleteResponse(status="success", deleted_id=log_id)
+
+
+@app.get("/nutrition/targets/me", response_model=NutritionTargetsResponse)
+async def get_my_bio_targets(
+    current_user_id: str = Depends(get_current_user_id),
+    _: None = Depends(reject_client_user_id),
+):
+    return calculate_nutrition_targets_for_user(current_user_id)
+
+
 @app.get("/nutrition/targets/{user_id}", response_model=NutritionTargetsResponse)
 async def get_bio_targets(
     user_id: str,
@@ -313,37 +535,7 @@ async def get_bio_targets(
             detail="Authenticated user cannot access another user's nutrition targets",
         )
 
-    query = (
-        supabase.table("dim_atleta")
-        .select("genero, edad, peso, altura, objetivo_metabolico, dias_entrenamiento_semana")
-        .eq("user_id", current_user_id)
-        .eq("is_current", True)
-        .execute()
-    )
-
-    if not query.data:
-        return {"kcal": 2100, "protein": 160, "carbs": 220, "fat": 70}
-
-    biometria = query.data[0]
-    genero = biometria["genero"].lower()
-    biological_sex = "male" if genero == "hombre" else "female"
-    target = HypertrophyEngineService().calculate_macro_targets(
-        UserBiometrics(
-            weight_kg=float(biometria["peso"]),
-            height_cm=float(biometria["altura"]),
-            age_years=int(biometria["edad"]),
-            biological_sex=biological_sex,
-            metabolic_goal=biometria.get("objetivo_metabolico", "maintenance"),
-            training_days_per_week=int(biometria.get("dias_entrenamiento_semana", 3)),
-        )
-    )
-
-    return {
-        "kcal": target.calories,
-        "protein": target.protein_g,
-        "carbs": target.carbs_g,
-        "fat": target.fat_g,
-    }
+    return calculate_nutrition_targets_for_user(current_user_id)
 
 
 @app.post("/training/kalos/preview", response_model=KalosTrainingPlanResponse)
