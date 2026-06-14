@@ -1,6 +1,14 @@
-import { Info } from "lucide-react";
+type ExerciseRowData = {
+  name: string;
+  muscle: string;
+  focus?: string;
+  sets: string | number;
+  reps: string;
+  rir: string | number;
+  rest: string;
+};
 
-export function ExerciseRow({ exercise }: { exercise: any }) {
+export function ExerciseRow({ exercise }: { exercise: ExerciseRowData }) {
   return (
     <div className="flex items-center justify-between py-5 border-b border-slate-800/50 last:border-0 hover:bg-slate-900/30 px-4 transition-all rounded-xl group">
       <div className="flex flex-col gap-1">

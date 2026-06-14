@@ -1,0 +1,125 @@
+{
+  "request": {
+    "days_per_week": 1,
+    "goal": "general_fitness",
+    "priority": "balanced",
+    "experience": "beginner",
+    "time_budget_minutes": 45,
+    "available_equipment": ["dumbbell", "bodyweight", "band", "bench"],
+    "constraints": {}
+  },
+  "plan": {
+    "contract_version": "kalos_training_plan.v1",
+    "plan_id": "plan_fixture_beginner_1_day",
+    "input_summary": {
+      "days_per_week": 1,
+      "goal": "general_fitness",
+      "priority": "balanced",
+      "experience": "beginner",
+      "time_budget_minutes": 45,
+      "equipment_scope": ["dumbbell", "bodyweight", "band", "bench"],
+      "constraints_applied": []
+    },
+    "program": {
+      "name": "Full body base 1 dia",
+      "duration_weeks": 8,
+      "split": ["Full Body"],
+      "weekly_volume_targets": {
+        "quads": 3,
+        "chest": 2,
+        "back": 2
+      },
+      "progression": {
+        "model": "double_progression",
+        "weeks": 8,
+        "rir_start": 3,
+        "rir_end": 1,
+        "deload_week": 5,
+        "load_rule": "Increase load when top reps are completed at target RIR."
+      },
+      "sessions": [
+        {
+          "session_id": "session_1",
+          "day_number": 1,
+          "label": "Full Body",
+          "intent": "full_body_technique",
+          "target_muscles": ["quads", "chest", "back"],
+          "estimated_minutes": 42,
+          "fatigue_points": 6,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_goblet_squat",
+              "exercise_name": "Goblet squat",
+              "primary_muscle": "quads",
+              "secondary_muscles": ["glutes"],
+              "movement_pattern": "squat",
+              "role": "anchor",
+              "sets": 3,
+              "rep_range": {"min": 8, "max": 10},
+              "rir_target": {"min": 2, "max": 3},
+              "rest_seconds": 120,
+              "fatigue_cost": "high",
+              "equipment": "dumbbell",
+              "joint_stress": ["knee", "hip"],
+              "substitution_group": "squat_quad_glute",
+              "weekly_set_contribution": {"quads": 3},
+              "repeat_justification": null,
+              "coaching_note": "Move with control and keep two reps in reserve."
+            },
+            {
+              "order": 2,
+              "exercise_id": "exercise_push_up",
+              "exercise_name": "Push-up",
+              "primary_muscle": "chest",
+              "secondary_muscles": ["triceps"],
+              "movement_pattern": "horizontal_push",
+              "role": "primary_accessory",
+              "sets": 2,
+              "rep_range": {"min": 8, "max": 12},
+              "rir_target": {"min": 2, "max": 3},
+              "rest_seconds": 90,
+              "fatigue_cost": "medium",
+              "equipment": "bodyweight",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "horizontal_push_chest",
+              "weekly_set_contribution": {"chest": 2},
+              "repeat_justification": null,
+              "coaching_note": "Stop before technique breaks."
+            },
+            {
+              "order": 3,
+              "exercise_id": "exercise_band_row",
+              "exercise_name": "Band row",
+              "primary_muscle": "back",
+              "secondary_muscles": ["biceps"],
+              "movement_pattern": "horizontal_pull",
+              "role": "secondary_accessory",
+              "sets": 2,
+              "rep_range": {"min": 10, "max": 15},
+              "rir_target": {"min": 2, "max": 3},
+              "rest_seconds": 75,
+              "fatigue_cost": "low",
+              "equipment": "band",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "row_back",
+              "weekly_set_contribution": {"back": 2},
+              "repeat_justification": null,
+              "coaching_note": "Pause briefly with shoulder blades back."
+            }
+          ]
+        }
+      ]
+    },
+    "quality_checks": {
+      "status": "pass",
+      "warnings": [],
+      "volume_within_limits": true,
+      "frequency_within_limits": true,
+      "fatigue_within_limits": true,
+      "equipment_available": true,
+      "constraints_respected": true,
+      "duplicate_exercises_justified": true
+    }
+  }
+}

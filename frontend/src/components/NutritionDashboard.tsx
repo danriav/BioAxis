@@ -160,7 +160,7 @@ export function NutritionDashboard() {
   };
 
   const handleAddNewSlot = () => {
-    setSlots((current) => [...current, `Sesion ${current.length + 1}`]);
+    setSlots((current) => [...current, `Sesión ${current.length + 1}`]);
   };
 
   const handleDeleteLog = async (logId: string) => {
@@ -213,12 +213,7 @@ export function NutritionDashboard() {
         </div>
       )}
 
-      <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <MacroCard label="Calorias" value={Math.round(totals.kcal)} target={bioTargets.kcal} color="bg-cyan-500" icon={<Zap size={14} />} />
-        <MacroCard label="Proteina" value={`${Math.round(totals.prot)}g`} target={`${bioTargets.protein}g`} color="bg-fuchsia-500" />
-        <MacroCard label="Carbos" value={`${Math.round(totals.carb)}g`} target={`${bioTargets.carbs}g`} color="bg-blue-500" />
-        <MacroCard label="Grasas" value={`${Math.round(totals.fat)}g`} target={`${bioTargets.fat}g`} color="bg-slate-400" />
-      </section>
+      <MacroOverview totals={totals} targets={bioTargets} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {slots.map((slot) => (
@@ -245,7 +240,7 @@ export function NutritionDashboard() {
           className="w-full py-6 rounded-[1.5rem] border-2 border-dashed border-slate-800 text-slate-500 font-black italic uppercase tracking-widest hover:border-cyan-500/50 hover:text-cyan-400 hover:bg-cyan-500/5 transition-all flex items-center justify-center gap-3 group"
         >
           <span className="text-2xl group-hover:scale-125 transition-transform">+</span>
-          Anadir Nueva Comida
+          Agregar comida
         </button>
       </div>
 
@@ -265,34 +260,98 @@ export function NutritionDashboard() {
   );
 }
 
-type MacroCardProps = {
-  label: string;
-  value: number | string;
-  target: number | string;
-  color: string;
-  icon?: React.ReactNode;
+type NutritionTotals = {
+  kcal: number;
+  prot: number;
+  carb: number;
+  fat: number;
 };
 
-function MacroCard({ label, value, target, color, icon }: MacroCardProps) {
-  const numericValue = Number.parseFloat(String(value)) || 0;
-  const numericTarget = Number.parseFloat(String(target)) || 0;
-  const percentage = numericTarget > 0 ? Math.min((numericValue / numericTarget) * 100, 100) : 0;
+type MacroOverviewProps = {
+  totals: NutritionTotals;
+  targets: NutritionTargets;
+};
+
+function MacroOverview({ totals, targets }: MacroOverviewProps) {
+  const kcal = Math.round(totals.kcal);
+  const kcalTarget = Math.round(targets.kcal);
+  const kcalProgress = kcalTarget > 0 ? Math.min(kcal / kcalTarget, 1) : 0;
+  const circumference = 2 * Math.PI * 42;
+  const strokeOffset = circumference * (1 - kcalProgress);
 
   return (
-    <div className="bg-slate-900/40 border border-white/5 p-6 rounded-[1.5rem] shadow-inner relative overflow-hidden group">
-      <div className="flex justify-between items-start mb-3 relative z-10">
-        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-300 transition-colors">{label}</span>
-        <div className="p-2 bg-slate-950 rounded-lg">{icon}</div>
+    <section className="mb-6 rounded-[1.5rem] border border-white/5 bg-slate-900/40 p-5 shadow-inner">
+      <div className="flex flex-col gap-5 md:flex-row md:items-center">
+        <div className="flex items-center justify-center md:w-44">
+          <div className="relative h-32 w-32">
+            <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100" role="img" aria-label="Progreso de calorías">
+              <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(30,41,59,0.95)" strokeWidth="9" />
+              <motion.circle
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                stroke="url(#calorieProgress)"
+                strokeLinecap="round"
+                strokeWidth="9"
+                strokeDasharray={circumference}
+                initial={{ strokeDashoffset: circumference }}
+                animate={{ strokeDashoffset: strokeOffset }}
+                transition={{ duration: 1, ease: "easeOut" }}
+              />
+              <defs>
+                <linearGradient id="calorieProgress" x1="0" x2="1" y1="0" y2="1">
+                  <stop offset="0%" stopColor="#22d3ee" />
+                  <stop offset="100%" stopColor="#3b82f6" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+              <span className="text-lg font-black tracking-tight text-white">{kcal.toLocaleString("es-MX")}</span>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                / {kcalTarget.toLocaleString("es-MX")}
+              </span>
+              <span className="mt-0.5 text-[10px] font-black uppercase tracking-widest text-cyan-400">kcal</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid flex-1 gap-4 md:grid-cols-3">
+          <MacroOverviewRow label="Proteína" value={totals.prot} target={targets.protein} color="bg-fuchsia-400" />
+          <MacroOverviewRow label="Carbos" value={totals.carb} target={targets.carbs} color="bg-blue-400" />
+          <MacroOverviewRow label="Grasas" value={totals.fat} target={targets.fat} color="bg-slate-300" />
+        </div>
       </div>
-      <div className="text-3xl font-black italic tracking-tighter mb-4">
-        {value} <span className="text-[10px] text-slate-600 font-normal not-italic uppercase tracking-widest ml-1">/ {target}</span>
+    </section>
+  );
+}
+
+type MacroOverviewRowProps = {
+  label: string;
+  value: number;
+  target: number;
+  color: string;
+};
+
+function MacroOverviewRow({ label, value, target, color }: MacroOverviewRowProps) {
+  const roundedValue = Math.round(value);
+  const roundedTarget = Math.round(target);
+  const percentage = roundedTarget > 0 ? Math.min((roundedValue / roundedTarget) * 100, 100) : 0;
+
+  return (
+    <div className="rounded-2xl border border-white/5 bg-slate-950/40 p-4">
+      <div className="mb-3 flex items-baseline justify-between gap-3">
+        <span className="text-xs font-black uppercase tracking-widest text-slate-400">{label}</span>
+        <span className="whitespace-nowrap text-sm font-bold text-slate-100">
+          {roundedValue} / {roundedTarget}g
+        </span>
       </div>
-      <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 1, ease: "easeOut" }}
-          className={`h-full ${color} shadow-[0_0_15px_rgba(6,182,212,0.4)]`}
+          className={`h-full rounded-full ${color}`}
         />
       </div>
     </div>
@@ -327,7 +386,7 @@ function WeeklyCalendar({ selectedDate, onSelectDate, streak }: WeeklyCalendarPr
     <div className="bg-slate-900/50 border border-white/5 rounded-[1.5rem] p-6 mb-8 backdrop-blur-sm">
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-black italic tracking-tighter text-white">BIO-PLAN</h2>
+          <h2 className="text-2xl font-black italic tracking-tighter text-white">Plan diario</h2>
           <div className="h-4 w-px bg-white/20" />
           <div className="flex items-center gap-2 bg-cyan-500/10 px-3 py-1 rounded-md border border-cyan-500/20">
             <Zap size={16} className="text-cyan-400" />
@@ -429,8 +488,9 @@ function MealSlot({ title, logs, onAdd, onDeleteLog }: MealSlotProps) {
             );
           })
         ) : (
-          <div className="h-full flex items-center justify-center border-2 border-dashed border-white/5 rounded-xl py-6">
-            <span className="text-[10px] uppercase tracking-widest text-slate-600 font-bold">Sin Datos</span>
+          <div className="h-full flex flex-col items-center justify-center gap-2 border-2 border-dashed border-white/5 rounded-xl py-6 text-center">
+            <span className="text-[10px] uppercase tracking-widest text-slate-600 font-bold">Aún no hay alimentos registrados</span>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-400">Agrega tu primera comida</span>
           </div>
         )}
       </div>
@@ -446,7 +506,7 @@ function MealSlot({ title, logs, onAdd, onDeleteLog }: MealSlotProps) {
         }}
         className="w-full py-3 text-xs font-bold uppercase tracking-widest text-slate-500 hover:text-cyan-400 hover:bg-cyan-500/10 rounded-xl transition-all border border-transparent hover:border-cyan-500/20"
       >
-        + Anadir Alimento
+        + Agregar alimento
       </button>
     </div>
   );

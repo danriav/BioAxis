@@ -1,13 +1,14 @@
 // src/components/auth/bio-form.tsx
 "use client";
 
-import { useState } from "react";
+import { type ChangeEvent, type InputHTMLAttributes, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   ArrowRight, Activity, Loader2, ShieldCheck, 
   Flame, Scale, TrendingUp 
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { validateBiometrics } from "@/lib/utils/biometric-validator";
 
@@ -34,8 +35,7 @@ export function BioForm() {
     gluteo: "",
     pierna: "",
     pantorrilla: "",
-    objetivo_metabolico: "mantenimiento", // Valor por defecto seguro
-    dias_entrenamiento: 4 // Promedio ideal por defecto
+    objetivo_metabolico: "mantenimiento" // Valor por defecto seguro
   });
 
   const nextStep = () => setStep((prev) => prev + 1);
@@ -107,7 +107,7 @@ const handleFinalize = async () => {
           pierna: parseFloat(formData.pierna) || null,
           pantorrilla: parseFloat(formData.pantorrilla) || null,
           objetivo_metabolico: formData.objetivo_metabolico,
-          dias_entrenamiento_semana: formData.dias_entrenamiento,
+          dias_entrenamiento_semana: 3,
           is_current: true
         });
 
@@ -128,9 +128,10 @@ const handleFinalize = async () => {
       router.refresh(); // 💡 Forzamos a Next.js a limpiar la caché del servidor
       router.push(`/${locale}/dashboard`); // 💡 Lanzamos al usuario al Dashboard
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      alert("Error al sincronizar biometría: " + error.message);
+      const message = error instanceof Error ? error.message : "Error desconocido";
+      alert("Error al sincronizar biometría: " + message);
       setIsAnalyzing(false); // Apagamos el loader si hay error
     }
   };
@@ -139,7 +140,7 @@ const handleFinalize = async () => {
   const isStep2Valid = formData.peso && parseFloat(formData.peso) > 0; 
 
   return (
-    <div className="max-w-2xl mx-auto bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-[3rem] shadow-2xl relative">
+    <div className="max-w-2xl mx-auto bg-slate-900/50 backdrop-blur-xl border border-slate-800 p-8 rounded-3xl shadow-2xl relative">
       
       {/* 3. Actualizamos la barra de progreso a 4 pasos (0, 1, 2, 3) */}
       <div className="flex justify-between mb-8 px-4">
@@ -167,10 +168,10 @@ const handleFinalize = async () => {
                 <Activity size={40} />
               </div>
               <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">
-                Inicialización del <span className="text-cyan-500">Sistema</span>
+                Configura tu <span className="text-cyan-500">perfil Kalos</span>
               </h2>
               <p className="text-slate-400 text-sm font-medium mt-4 max-w-sm mx-auto leading-relaxed">
-                Estás a punto de configurar tu Ecosistema BioAxis. Necesitamos datos precisos para calibrar tu motor de hipertrofia y generar rutinas milimétricas.
+                Crea tu perfil Kalos con tus medidas clave para recibir objetivos y rutinas mejor ajustadas a tu progreso.
               </p>
             </header>
 
@@ -181,11 +182,11 @@ const handleFinalize = async () => {
               </div>
               <div className="flex items-center gap-4">
                 <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-400">2</div>
-                <p className="text-sm font-bold text-white uppercase tracking-widest">Masa y Perímetros</p>
+                <p className="text-sm font-bold text-white uppercase tracking-widest">Medidas corporales</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-500 border border-cyan-500/30 flex items-center justify-center text-xs font-bold">3</div>
-                <p className="text-sm font-black text-cyan-500 uppercase tracking-widest italic">Directriz Metabólica</p>
+                <p className="text-sm font-black text-cyan-500 uppercase tracking-widest italic">Objetivo nutricional</p>
               </div>
             </div>
             
@@ -195,7 +196,7 @@ const handleFinalize = async () => {
                 onClick={nextStep}
                 className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all uppercase tracking-[0.2em]"
               >
-                Comenzar Calibración <ArrowRight size={20} />
+                Comenzar <ArrowRight size={20} />
               </button>
             </div>
           </motion.div>
@@ -206,7 +207,7 @@ const handleFinalize = async () => {
           <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <header className="mb-8 text-left">
               <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Estructura Base</h2>
-              <p className="text-slate-500 text-sm font-medium mt-2">Datos inmutables para el cálculo estructural.</p>
+              <p className="text-slate-500 text-sm font-medium mt-2">Cuéntanos lo básico para personalizar tu experiencia.</p>
             </header>
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 text-left">
@@ -217,10 +218,10 @@ const handleFinalize = async () => {
                 <button type="button" onClick={() => setFormData({ ...formData, genero: "mujer" })} className={`flex-1 py-4 rounded-2xl border font-bold transition-all uppercase tracking-widest text-sm ${formData.genero === "mujer" ? "border-cyan-500 bg-cyan-500/10 text-white" : "border-slate-800 text-slate-500 hover:border-slate-700 hover:text-white"}`}>Mujer</button>
               </div>
               <div className="text-left col-span-1"><Input label="Nacimiento" name="fechaNacimiento" value={formData.fechaNacimiento} onChange={handleChange} type="date" /></div>
-              <div className="text-left col-span-1"><Input label="Altura Física" name="altura" value={formData.altura} onChange={handleChange} placeholder="Ej: 175 cm" type="number" /></div>
+              <div className="text-left col-span-1"><Input label="Altura" name="altura" value={formData.altura} onChange={handleChange} placeholder="Ej: 175 cm" type="number" /></div>
             </div>
             <div className="mt-8 flex justify-end">
-              <button type="button" disabled={!isStep1Valid} onClick={nextStep} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-[0.2em]">Siguiente Fase <ArrowRight size={20} /></button>
+              <button type="button" disabled={!isStep1Valid} onClick={nextStep} className="w-full bg-gradient-to-r from-cyan-600 to-blue-600 py-4 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-[0.2em]">Continuar <ArrowRight size={20} /></button>
             </div>
           </motion.div>
         )}
@@ -229,7 +230,7 @@ const handleFinalize = async () => {
         {step === 2 && (
           <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
             <header className="mb-6 text-left flex flex-col items-start">
-              <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Masa y Perímetros</h2>
+              <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Medidas corporales</h2>
               <p className="text-slate-500 text-sm font-medium text-left mt-2 block">
                 {formData.nombre ? `${formData.nombre}, el` : "El"} peso es <b className="text-cyan-500">obligatorio</b> para generar rutinas equilibradas. Las medidas musculares nos ayudan a detectar desbalances (opcionales).
               </p>
@@ -238,14 +239,14 @@ const handleFinalize = async () => {
             <div className="bg-cyan-500/5 border border-cyan-500/30 p-6 rounded-[2rem] mb-6">
               <div className="flex items-center gap-3 mb-4">
                 <ShieldCheck className="text-cyan-500" size={20} />
-                <h3 className="text-xs font-black text-white uppercase tracking-widest">Dato Requerido</h3>
+                <h3 className="text-xs font-black text-white uppercase tracking-widest">Dato requerido</h3>
               </div>
-              <Input label="Peso Corporal" name="peso" value={formData.peso} onChange={handleChange} placeholder="Ej: 75 Kg" type="number" />
+              <Input label="Peso corporal" name="peso" value={formData.peso} onChange={handleChange} placeholder="Ej: 75 Kg" type="number" />
             </div>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center" aria-hidden="true"><div className="w-full border-t border-slate-800"></div></div>
-              <div className="relative flex justify-center"><span className="bg-slate-900/50 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Perímetros Opcionales</span></div>
+              <div className="relative flex justify-center"><span className="bg-slate-900/50 px-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Medidas opcionales</span></div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 text-left mt-6">
@@ -261,10 +262,10 @@ const handleFinalize = async () => {
             </div>
             
             <div className="flex flex-col-reverse md:flex-row justify-between mt-12 gap-4">
-              <button type="button" disabled={!isStep2Valid} onClick={nextStep} className="p-4 rounded-2xl text-slate-400 font-bold hover:text-white hover:bg-slate-800 transition-all text-xs uppercase tracking-widest disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400">Saltar Perímetros</button>
+              <button type="button" disabled={!isStep2Valid} onClick={nextStep} className="p-4 rounded-2xl text-slate-400 font-bold hover:text-white hover:bg-slate-800 transition-all text-xs uppercase tracking-widest disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400">Saltar medidas</button>
               <div className="flex gap-4">
                 <button type="button" onClick={prevStep} className="p-4 rounded-2xl border border-slate-800 text-slate-400 hover:bg-slate-800 transition-all font-bold tracking-widest uppercase text-xs">Atrás</button>
-                <button type="button" disabled={!isStep2Valid} onClick={nextStep} className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 py-4 px-8 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-widest text-xs">Siguiente Fase <ArrowRight size={16}/></button>
+                <button type="button" disabled={!isStep2Valid} onClick={nextStep} className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 py-4 px-8 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-widest text-xs">Continuar <ArrowRight size={16}/></button>
               </div>
             </div>
           </motion.div>
@@ -278,16 +279,16 @@ const handleFinalize = async () => {
             className="space-y-8"
           >
             <header className="text-left flex flex-col items-start">
-              <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Directriz Metabólica</h2>
+              <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter">Objetivo nutricional</h2>
               <p className="text-slate-500 text-sm font-medium text-left mt-2 block">
-                Define tu objetivo termodinámico actual. Esto ajustará tus macros y el volumen de entrenamiento en el Sintetizador Alpha.
+                Define tu objetivo nutricional actual. Esto ajustará tus macros iniciales y la guía de progreso.
               </p>
             </header>
 
             {/* SELECCIÓN DE OBJETIVO */}
             <div className="space-y-3">
               <ObjectiveCard 
-                title="Oxidación Lipídica" subtitle="Déficit Calórico" icon={Flame} color="text-rose-500" bg="bg-rose-500"
+                title="Pérdida de grasa" subtitle="Déficit calórico" icon={Flame} color="text-rose-500" bg="bg-rose-500"
                 selected={formData.objetivo_metabolico === 'deficit'}
                 onClick={() => setFormData({...formData, objetivo_metabolico: 'deficit'})}
               />
@@ -297,33 +298,10 @@ const handleFinalize = async () => {
                 onClick={() => setFormData({...formData, objetivo_metabolico: 'mantenimiento'})}
               />
               <ObjectiveCard 
-                title="Síntesis Muscular" subtitle="Superávit Calórico" icon={TrendingUp} color="text-emerald-500" bg="bg-emerald-500"
+                title="Ganar músculo" subtitle="Superávit calórico" icon={TrendingUp} color="text-emerald-500" bg="bg-emerald-500"
                 selected={formData.objetivo_metabolico === 'superavit'}
                 onClick={() => setFormData({...formData, objetivo_metabolico: 'superavit'})}
               />
-            </div>
-
-            {/* FRECUENCIA DE ENTRENAMIENTO */}
-            <div className="text-left">
-              <label className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em] ml-2 mb-3 block">
-                Frecuencia de Entrenamiento (Días x Semana)
-              </label>
-              <div className="flex gap-2 justify-between">
-                {[1, 2, 3, 4, 5, 6, 7].map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setFormData({...formData, dias_entrenamiento: d})}
-                    className={`flex-1 py-4 rounded-[1rem] font-black text-lg transition-all ${
-                      formData.dias_entrenamiento === d 
-                        ? 'bg-cyan-500 text-slate-950 shadow-[0_0_15px_rgba(6,182,212,0.4)]' 
-                        : 'bg-slate-900/50 text-slate-500 border border-slate-800 hover:border-cyan-500/30 hover:text-white'
-                    }`}
-                  >
-                    {d}
-                  </button>
-                ))}
-              </div>
             </div>
 
             <div className="flex justify-between mt-12 gap-4">
@@ -335,7 +313,7 @@ const handleFinalize = async () => {
                 onClick={handleFinalize}
                 className="flex-1 bg-gradient-to-r from-cyan-600 to-blue-600 py-4 px-8 rounded-2xl text-white font-black flex items-center justify-center gap-2 hover:shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all disabled:opacity-50 disabled:grayscale uppercase tracking-widest text-xs"
               >
-                {isAnalyzing ? <Loader2 className="animate-spin" /> : "Sincronizar Ecosistema"}
+                {isAnalyzing ? <Loader2 className="animate-spin" /> : "Guardar perfil"}
               </button>
             </div>
           </motion.div>
@@ -351,9 +329,9 @@ const handleFinalize = async () => {
             <div className="text-center">
               <Loader2 className="w-16 h-16 text-cyan-500 animate-spin mx-auto mb-6" />
               <h2 className="text-3xl font-black text-white italic uppercase tracking-tighter mb-4">
-                Generando Ecosistema Alpha
+                Generando perfil Kalos
               </h2>
-              <p className="text-cyan-500 font-mono text-xs tracking-[0.2em] uppercase">Sincronizando directriz metabólica...</p>
+              <p className="text-cyan-500 font-mono text-xs tracking-[0.2em] uppercase">Guardando tu objetivo...</p>
             </div>
           </motion.div>
         )}
@@ -363,7 +341,14 @@ const handleFinalize = async () => {
 }
 
 // Subcomponente reutilizable para los Inputs
-function Input({ label, name, value, onChange, type, ...props }: any) {
+type BioInputProps = Omit<InputHTMLAttributes<HTMLInputElement>, "onChange"> & {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+};
+
+function Input({ label, name, value, onChange, type, ...props }: BioInputProps) {
   return (
     <div className="flex flex-col gap-2 group text-left">
       <label className="text-[10px] uppercase font-black text-slate-500 tracking-[0.2em] ml-2 group-focus-within:text-cyan-500 transition-colors">
@@ -383,7 +368,17 @@ function Input({ label, name, value, onChange, type, ...props }: any) {
 }
 
 // Subcomponente para las tarjetas de Objetivo
-function ObjectiveCard({ title, subtitle, icon: Icon, selected, onClick, color, bg }: any) {
+type ObjectiveCardProps = {
+  title: string;
+  subtitle: string;
+  icon: LucideIcon;
+  selected: boolean;
+  onClick: () => void;
+  color: string;
+  bg: string;
+};
+
+function ObjectiveCard({ title, subtitle, icon: Icon, selected, onClick, color, bg }: ObjectiveCardProps) {
   return (
     <button
       type="button"

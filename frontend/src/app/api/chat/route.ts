@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 
+type GeminiPart = {
+  text?: string;
+};
+
 export async function POST(req: Request) {
   try {
-    const { message, userContext } = await req.json();
+    const { message } = await req.json();
     const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
@@ -13,7 +17,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         system_instruction: {
           parts: [{
-            text: `Eres el Bio-Copiloto de BioAxis. 
+            text: `Eres el copiloto de Kalos.
             TONO: Motivador, humano y experto en fitness.
             
             MAPA DE LA APP (Guía al usuario aquí si pregunta):
@@ -40,12 +44,12 @@ export async function POST(req: Request) {
     });
 
     const data = await response.json();
-    const text = data.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join("") 
+    const text = data.candidates?.[0]?.content?.parts?.map((p: GeminiPart) => p.text).join("")
                  || "¡Uy! Me distraje un segundo. ¿Me repites? 😅";
 
     return NextResponse.json({ text });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "Fallo de conexión" }, { status: 500 });
   }
 }

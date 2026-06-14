@@ -1,0 +1,228 @@
+{
+  "request": {
+    "days_per_week": 3,
+    "goal": "hypertrophy",
+    "priority": "balanced",
+    "experience": "intermediate",
+    "time_budget_minutes": 55,
+    "available_equipment": ["dumbbell", "bodyweight", "band"],
+    "constraints": {}
+  },
+  "plan": {
+    "contract_version": "kalos_training_plan.v1",
+    "plan_id": "plan_fixture_limited_equipment_warning",
+    "input_summary": {
+      "days_per_week": 3,
+      "goal": "hypertrophy",
+      "priority": "balanced",
+      "experience": "intermediate",
+      "time_budget_minutes": 55,
+      "equipment_scope": ["dumbbell", "bodyweight", "band"],
+      "constraints_applied": []
+    },
+    "program": {
+      "name": "Limited equipment balanced 3 days",
+      "duration_weeks": 8,
+      "split": ["Full Body A", "Full Body B", "Full Body C"],
+      "weekly_volume_targets": {
+        "quads": 6,
+        "chest": 6,
+        "back": 6,
+        "glutes": 6
+      },
+      "progression": {
+        "model": "double_progression",
+        "weeks": 8,
+        "rir_start": 2,
+        "rir_end": 1,
+        "deload_week": 5,
+        "load_rule": "Progress reps first, then load when equipment allows."
+      },
+      "sessions": [
+        {
+          "session_id": "session_1",
+          "day_number": 1,
+          "label": "Full Body A",
+          "intent": "squat_push",
+          "target_muscles": ["quads", "chest"],
+          "estimated_minutes": 50,
+          "fatigue_points": 5,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_goblet_squat",
+              "exercise_name": "Goblet squat",
+              "primary_muscle": "quads",
+              "secondary_muscles": ["glutes"],
+              "movement_pattern": "squat",
+              "role": "anchor",
+              "sets": 3,
+              "rep_range": {"min": 8, "max": 12},
+              "rir_target": {"min": 1, "max": 2},
+              "rest_seconds": 120,
+              "fatigue_cost": "high",
+              "equipment": "dumbbell",
+              "joint_stress": ["knee", "hip"],
+              "substitution_group": "squat_quad_glute",
+              "weekly_set_contribution": {"quads": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            },
+            {
+              "order": 2,
+              "exercise_id": "exercise_push_up",
+              "exercise_name": "Push-up",
+              "primary_muscle": "chest",
+              "secondary_muscles": ["triceps"],
+              "movement_pattern": "horizontal_push",
+              "role": "primary_accessory",
+              "sets": 3,
+              "rep_range": {"min": 8, "max": 15},
+              "rir_target": {"min": 1, "max": 2},
+              "rest_seconds": 90,
+              "fatigue_cost": "medium",
+              "equipment": "bodyweight",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "horizontal_push_chest",
+              "weekly_set_contribution": {"chest": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        },
+        {
+          "session_id": "session_2",
+          "day_number": 2,
+          "label": "Full Body B",
+          "intent": "hinge_pull",
+          "target_muscles": ["glutes", "back"],
+          "estimated_minutes": 48,
+          "fatigue_points": 5,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_dumbbell_romanian_deadlift",
+              "exercise_name": "Dumbbell Romanian deadlift",
+              "primary_muscle": "glutes",
+              "secondary_muscles": ["hamstrings"],
+              "movement_pattern": "hinge",
+              "role": "anchor",
+              "sets": 3,
+              "rep_range": {"min": 8, "max": 12},
+              "rir_target": {"min": 1, "max": 2},
+              "rest_seconds": 120,
+              "fatigue_cost": "high",
+              "equipment": "dumbbell",
+              "joint_stress": ["hip", "lumbar"],
+              "substitution_group": "hinge_hamstrings",
+              "weekly_set_contribution": {"glutes": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            },
+            {
+              "order": 2,
+              "exercise_id": "exercise_band_row",
+              "exercise_name": "Band row",
+              "primary_muscle": "back",
+              "secondary_muscles": ["biceps"],
+              "movement_pattern": "horizontal_pull",
+              "role": "primary_accessory",
+              "sets": 3,
+              "rep_range": {"min": 10, "max": 15},
+              "rir_target": {"min": 1, "max": 2},
+              "rest_seconds": 90,
+              "fatigue_cost": "medium",
+              "equipment": "band",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "row_back",
+              "weekly_set_contribution": {"back": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        },
+        {
+          "session_id": "session_3",
+          "day_number": 3,
+          "label": "Full Body C",
+          "intent": "single_leg_upper",
+          "target_muscles": ["quads", "chest", "back", "glutes"],
+          "estimated_minutes": 52,
+          "fatigue_points": 6,
+          "exercises": [
+            {
+              "order": 1,
+              "exercise_id": "exercise_split_squat",
+              "exercise_name": "Dumbbell split squat",
+              "primary_muscle": "quads",
+              "secondary_muscles": ["glutes"],
+              "movement_pattern": "squat",
+              "role": "anchor",
+              "sets": 3,
+              "rep_range": {"min": 8, "max": 12},
+              "rir_target": {"min": 1, "max": 2},
+              "rest_seconds": 120,
+              "fatigue_cost": "high",
+              "equipment": "dumbbell",
+              "joint_stress": ["knee", "hip"],
+              "substitution_group": "squat_quad_glute",
+              "weekly_set_contribution": {"quads": 3, "glutes": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            },
+            {
+              "order": 2,
+              "exercise_id": "exercise_dumbbell_floor_press",
+              "exercise_name": "Dumbbell floor press",
+              "primary_muscle": "chest",
+              "secondary_muscles": ["triceps"],
+              "movement_pattern": "horizontal_push",
+              "role": "primary_accessory",
+              "sets": 3,
+              "rep_range": {"min": 8, "max": 12},
+              "rir_target": {"min": 1, "max": 2},
+              "rest_seconds": 90,
+              "fatigue_cost": "medium",
+              "equipment": "dumbbell",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "horizontal_push_chest",
+              "weekly_set_contribution": {"chest": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            },
+            {
+              "order": 3,
+              "exercise_id": "exercise_one_arm_dumbbell_row",
+              "exercise_name": "One-arm dumbbell row",
+              "primary_muscle": "back",
+              "secondary_muscles": ["biceps"],
+              "movement_pattern": "horizontal_pull",
+              "role": "secondary_accessory",
+              "sets": 3,
+              "rep_range": {"min": 8, "max": 12},
+              "rir_target": {"min": 1, "max": 2},
+              "rest_seconds": 90,
+              "fatigue_cost": "low",
+              "equipment": "dumbbell",
+              "joint_stress": ["shoulder", "elbow"],
+              "substitution_group": "row_back",
+              "weekly_set_contribution": {"back": 3},
+              "repeat_justification": null,
+              "coaching_note": null
+            }
+          ]
+        }
+      ]
+    },
+    "quality_checks": {
+      "status": "warning",
+      "warnings": ["limited_equipment_substitutions"],
+      "volume_within_limits": true,
+      "frequency_within_limits": true,
+      "fatigue_within_limits": true,
+      "equipment_available": true,
+      "constraints_respected": true,
+      "duplicate_exercises_justified": true
+    }
+  }
+}

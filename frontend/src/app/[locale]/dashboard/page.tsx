@@ -8,20 +8,35 @@ import {
   Loader2, ChevronRight, BarChart3, Activity 
 } from "lucide-react";
 import { getSupabaseClient } from "@/lib/supabase/client";
-import { NutritionApiError, NutritionService } from "@/lib/nutrition-service";
+import { NutritionApiError, NutritionService, type NutritionTargets } from "@/lib/nutrition-service";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
-const cardStyle = "bg-slate-900/40 backdrop-blur-md border border-slate-800 p-8 rounded-[3rem] shadow-xl hover:border-cyan-500/30 transition-all duration-500";
+const cardStyle = "bg-slate-900/40 backdrop-blur-md border border-slate-800 p-8 rounded-3xl shadow-xl hover:border-cyan-500/30 transition-all duration-500";
+
+type AthleteSnapshot = {
+  peso?: number;
+  hombros?: number;
+  cintura?: number;
+  cadera?: number;
+  brazo?: number;
+  antebrazo?: number;
+  pierna?: number;
+  pantorrilla?: number;
+  genero?: string;
+  objetivo_metabolico?: string;
+  objetivo?: string;
+  fecha?: string;
+};
 
 export default function ScientificDashboard() {
-  const [userBio, setUserBio] = useState<any>(null);
-  const [hoveredData, setHoveredData] = useState<any>(null);
+  const [userBio, setUserBio] = useState<AthleteSnapshot | null>(null);
+  const [hoveredData, setHoveredData] = useState<AthleteSnapshot | null>(null);
   
   const [loading, setLoading] = useState(true);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>("");
-  const [bioTargets, setBioTargets] = useState<any>(null);
+  const [bioTargets, setBioTargets] = useState<NutritionTargets | null>(null);
   
   const params = useParams();
   const router = useRouter();
@@ -50,7 +65,11 @@ useEffect(() => {
             .select('display_name')
             .eq('user_id', user.id)
             .single();
-          if (profile?.display_name) setUserName(profile.display_name);
+          const fallbackName =
+            typeof user.user_metadata?.display_name === "string"
+              ? user.user_metadata.display_name
+              : user.email?.split("@")[0] || "";
+          setUserName(profile?.display_name || fallbackName);
 
           const { data } = await supabase
             .from('dim_atleta')
@@ -60,15 +79,24 @@ useEffect(() => {
             .order('created_at', { ascending: false }) 
             .limit(1);
             
-          if (data?.[0]) setUserBio(data[0]);
+          if (data?.[0]) setUserBio(data[0] as AthleteSnapshot);
 
           // 🟢 CAMBIO 1: Llamada al Bio-Motor de Python
-          const targets = await NutritionService.getTargets(user.id, session.access_token);
-          setBioTargets(targets);
+          try {
+            const targets = await NutritionService.getTargets(user.id, session.access_token);
+            setBioTargets(targets);
+          } catch (err) {
+            if (err instanceof NutritionApiError && err.status === 401) {
+              setStatusMessage("Tu sesión expiró. Inicia sesión otra vez.");
+              router.replace(`/${locale}/login`);
+              return;
+            }
+            setBioTargets(null);
+          }
         }
       } catch (err) {
         if (err instanceof NutritionApiError && err.status === 401) {
-          setStatusMessage("Tu sesion expiro. Inicia sesion otra vez.");
+          setStatusMessage("Tu sesión expiró. Inicia sesión otra vez.");
           router.replace(`/${locale}/login`);
         } else if (err instanceof NutritionApiError && err.status === 403) {
           setStatusMessage("No tienes acceso a este dashboard.");
@@ -91,7 +119,7 @@ useEffect(() => {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 text-white">
       <div className="max-w-md rounded-3xl border border-slate-800 bg-slate-900/60 p-8 text-center">
         <ShieldCheck className="mx-auto mb-4 text-cyan-400" size={32} />
-        <h1 className="text-xl font-black uppercase tracking-widest">Sesion requerida</h1>
+        <h1 className="text-xl font-black uppercase tracking-widest">Sesión requerida</h1>
         <p className="mt-3 text-sm text-slate-400">{statusMessage}</p>
         <Link
           href={`/${locale}/login`}
@@ -104,18 +132,19 @@ useEffect(() => {
   );
 
   // Fuente de verdad dinámica para toda la página
-  const active = hoveredData || {
-    peso: userBio?.peso || 0,
-    hombros: userBio?.hombros || 0,
-    cintura: userBio?.cintura || 0,
-    cadera: userBio?.cadera || 0,
-    brazo: userBio?.brazo || 0,
-    antebrazo: userBio?.antebrazo || 0,
-    pierna: userBio?.pierna || 0,
-    pantorrilla: userBio?.pantorrilla || 0,
-    genero: userBio?.genero || '---',
-    objetivo: userBio?.objetivo_metabolico || '---',
-    fecha: "Estado Actual"
+  const activeSource = hoveredData || userBio || {};
+  const active = {
+    peso: activeSource.peso || 0,
+    hombros: activeSource.hombros || 0,
+    cintura: activeSource.cintura || 0,
+    cadera: activeSource.cadera || 0,
+    brazo: activeSource.brazo || 0,
+    antebrazo: activeSource.antebrazo || 0,
+    pierna: activeSource.pierna || 0,
+    pantorrilla: activeSource.pantorrilla || 0,
+    genero: activeSource.genero || "---",
+    objetivo: activeSource.objetivo || activeSource.objetivo_metabolico || "---",
+    fecha: activeSource.fecha || "Estado Actual",
   };
 
   const targetHourglass = 0.70;
@@ -123,6 +152,21 @@ useEffect(() => {
   const currentRatioSimetria = active.cadera > 0 ? Number((active.hombros / active.cadera).toFixed(2)) : 0;
   const currentRatioCurvatura = active.cadera > 0 ? Number((active.cintura / active.cadera).toFixed(2)) : 0;
   const gap = Math.abs((active.brazo || 0) - (active.pantorrilla || 0)).toFixed(1);
+  const fuelCalories = bioTargets?.kcal ? Math.round(bioTargets.kcal) : Math.round(active.peso * 33);
+  const macroTargets = [
+    { label: "Proteína", value: Math.round(bioTargets?.protein || 0), color: "bg-fuchsia-400" },
+    { label: "Carbos", value: Math.round(bioTargets?.carbs || 0), color: "bg-blue-400" },
+    { label: "Grasas", value: Math.round(bioTargets?.fat || 0), color: "bg-slate-300" },
+  ];
+  const displayName = userName || "Atleta";
+  const goalLabel = {
+    deficit: "Definición",
+    mantenimiento: "Mantenimiento",
+    maintenance: "Mantenimiento",
+    superavit: "Volumen",
+    hypertrophy: "Volumen",
+    fat_loss: "Definición",
+  }[active.objetivo] || "Sin objetivo";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10 font-sans">
@@ -130,17 +174,21 @@ useEffect(() => {
       {/* HEADER */}
       <header className="max-w-7xl mx-auto mb-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
-          <h1 className="text-3xl font-black italic uppercase tracking-tighter">
-            {userName ? <span className="text-white">{userName}, </span> : ""}
-            <span className="text-slate-300">
-              {active.genero === 'hombre' ? "Estructura Apex" : "Atleta Alpha"}
-            </span>{" "}
-            <span className="text-cyan-500">Bioaxis</span>
+          <h1 className="text-3xl font-black italic uppercase tracking-tighter text-white">
+            {displayName}
           </h1>
-          <p className="text-slate-500 flex items-center gap-2 mt-1 font-bold text-[10px] uppercase tracking-widest text-left">
-            <ShieldCheck size={14} className="text-cyan-500" />
-            Viendo: {hoveredData ? `Punto Histórico (${active.fecha})` : "Registro Actual"} | {active.peso} kg
-          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-cyan-500/20 bg-cyan-500/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-cyan-300">
+              <ShieldCheck size={13} />
+              {hoveredData ? `Histórico ${active.fecha}` : "Registro actual"}
+            </span>
+            <span className="rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-300">
+              {active.peso} kg
+            </span>
+            <span className="rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-300">
+              {goalLabel}
+            </span>
+          </div>
         </motion.div>
 
         <div className="flex flex-wrap items-center gap-4">
@@ -156,15 +204,11 @@ useEffect(() => {
               <div className="text-left">
                 <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest leading-none mb-1">Análisis Detallado</p>
                 <p className="text-[11px] font-bold text-white flex items-center gap-1 leading-none uppercase italic">
-                  Laboratorio <ChevronRight size={12} className="text-cyan-500" />
+                  Progresión <ChevronRight size={12} className="text-cyan-500" />
                 </p>
               </div>
             </motion.button>
           </Link>
-          <div className="hidden md:flex bg-slate-900/80 border border-slate-800 px-4 py-3 rounded-2xl items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse shadow-[0_0_10px_#06b6d4]" />
-            <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest leading-none">Biometría SCD2 Activa</span>
-          </div>
         </div>
       </header>
 
@@ -245,18 +289,28 @@ useEffect(() => {
           </div>
 
           {/* NUTRICIÓN */}
-          <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-8 rounded-[3.5rem] shadow-xl relative overflow-hidden group text-left">
-            <h2 className="text-white/70 text-[10px] font-black uppercase tracking-[0.2em] italic">Fuel Analysis</h2>
-            <p className="text-5xl font-black text-white mt-4 tracking-tighter">
-              {Math.round(active.peso * 33)} <span className="text-sm opacity-50 font-medium italic">kcal</span>
-            </p>
-            <button className="mt-10 w-full py-5 bg-white text-slate-900 rounded-[1.5rem] text-[11px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all hover:bg-cyan-50">
+          <div className="bg-gradient-to-br from-cyan-600 to-blue-700 p-6 rounded-3xl shadow-xl relative overflow-hidden group text-left">
+            <h2 className="text-white/70 text-[10px] font-black uppercase tracking-[0.2em] italic">Macronutrientes</h2>
+            <div className="mt-3 grid min-h-[118px] grid-cols-[minmax(0,1fr)_170px] items-center gap-5">
+              <p className="self-center text-4xl font-black text-white tracking-tighter">
+                {fuelCalories} <span className="text-sm opacity-50 font-medium italic">kcal</span>
+              </p>
+              <div className="self-center">
+                {macroTargets.map((macro) => (
+                  <MacroTargetRow key={macro.label} {...macro} />
+                ))}
+              </div>
+            </div>
+            <Link
+              href={`/${locale}/nutrition`}
+              className="mt-3 w-full py-3.5 bg-white text-slate-900 rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 transition-all hover:bg-cyan-50"
+            >
               Optimizar Macros <ArrowRight size={16} />
-            </button>
+            </Link>
           </div>
           
           {/* SIMETRÍA */}
-          <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-[3rem] shadow-lg text-left">
+          <div className="bg-slate-900/60 border border-slate-800 p-8 rounded-3xl shadow-lg text-left">
             <div className="flex items-center justify-between mb-6">
               <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Balance de Extremidades</h4>
               <div className="p-2.5 bg-slate-800 rounded-xl text-cyan-500 border border-slate-700">
@@ -305,6 +359,33 @@ useEffect(() => {
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+type MacroTargetRowProps = {
+  label: string;
+  value: number;
+  color: string;
+};
+
+function MacroTargetRow({ label, value, color }: MacroTargetRowProps) {
+  return (
+    <div className="border-b border-white/20 py-1 last:border-b-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-[9px] font-semibold text-white/85">{label}</span>
+        <span className="whitespace-nowrap text-[9px] font-semibold text-white">
+          {value}g
+        </span>
+      </div>
+      <div className="mt-1 h-0.5 w-full overflow-hidden rounded-full bg-white/20">
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: value > 0 ? "100%" : "0%" }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className={`h-full rounded-full ${color}`}
+        />
+      </div>
     </div>
   );
 }

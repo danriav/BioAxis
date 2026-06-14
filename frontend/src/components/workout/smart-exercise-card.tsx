@@ -1,9 +1,19 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Layers, Repeat, Target, Timer, MessageSquare, HelpCircle } from "lucide-react";
+import { Layers, Repeat, Target, Timer, MessageSquare, HelpCircle, type LucideIcon } from "lucide-react";
 
-const TooltipLabel = ({ text, tooltipText, icon: Icon, iconColor }: { text: string, tooltipText: string, icon: any, iconColor: string }) => (
+type SmartExercise = {
+  name_es: string;
+  biomechanical_bias?: string;
+  sets: string | number;
+  reps: string;
+  rir: string | number;
+  rest: string | number;
+  notes?: string | null;
+};
+
+const TooltipLabel = ({ text, tooltipText, icon: Icon, iconColor }: { text: string, tooltipText: string, icon: LucideIcon, iconColor: string }) => (
   <div className="relative group/tooltip flex items-center gap-1 w-fit cursor-help">
     <label className="text-[9px] uppercase font-black text-slate-500 tracking-widest flex items-center gap-1">
       <Icon size={10} className={iconColor} /> {text}
@@ -16,7 +26,7 @@ const TooltipLabel = ({ text, tooltipText, icon: Icon, iconColor }: { text: stri
   </div>
 );
 
-export function SmartExerciseCard({ exercise }: { exercise: any }) {
+export function SmartExerciseCard({ exercise }: { exercise: SmartExercise }) {
   return (
     <motion.div layout className="bg-slate-900/50 border border-slate-800 rounded-[2rem] p-6 hover:border-slate-700 transition-all group">
       <div className="flex justify-between items-start mb-6">

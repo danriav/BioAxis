@@ -20,9 +20,33 @@ const METRICS_MAP = [
   { id: "brazo", label: "Brazos (Bíceps)", color: "#14b8a6", unit: "cm" },
   { id: "cintura", label: "Cintura", color: "#eab308", unit: "cm" },
   { id: "cadera", label: "Cadera Base", color: "#f97316", unit: "cm" },
-];
+] as const;
 
-const CustomTooltip = ({ active, payload, label, unit }: any) => {
+type MetricId = (typeof METRICS_MAP)[number]["id"];
+type MetricConfig = (typeof METRICS_MAP)[number];
+
+type HistoryPoint = {
+  uid: string;
+  fecha: string;
+} & Record<MetricId, number>;
+
+type RawHistoryEntry = Partial<Record<MetricId, number | null>> & {
+  created_at?: string | null;
+  valid_from?: string | null;
+};
+
+type TooltipPayload = {
+  value: number;
+};
+
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string | number;
+  unit: string;
+};
+
+const CustomTooltip = ({ active, payload, label, unit }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     const cleanLabel = typeof label === 'string' ? label.split('_')[0] : label;
     return (
@@ -38,9 +62,9 @@ const CustomTooltip = ({ active, payload, label, unit }: any) => {
 };
 
 export function PerimeterAnalytics() {
-  const [history, setHistory] = useState<any[]>([]);
+  const [history, setHistory] = useState<HistoryPoint[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeMetric, setActiveMetric] = useState(METRICS_MAP[1]); // Empezamos con Glúteo
+  const [activeMetric, setActiveMetric] = useState<MetricConfig>(METRICS_MAP[1]); // Empezamos con Glúteo
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -57,22 +81,22 @@ export function PerimeterAnalytics() {
         .order('created_at', { ascending: true });
               
       if (data && data.length > 0) {
-        const formatted = data.map((entry, index) => {
-          const dateObj = new Date(entry.created_at || entry.valid_from);
+        const formatted = (data as RawHistoryEntry[]).map((entry, index) => {
+          const dateObj = new Date(entry.created_at || entry.valid_from || Date.now());
           const fechaBase = `${String(dateObj.getUTCDate()).padStart(2, '0')}/${String(dateObj.getUTCMonth() + 1).padStart(2, '0')}`;
           
           return {
             uid: `${fechaBase}_${index}`,
             fecha: fechaBase,
-            peso: entry.peso,
-            gluteo: entry.gluteo,
-            pierna: entry.pierna,
-            pantorrilla: entry.pantorrilla,
-            hombros: entry.hombros,
-            pecho: entry.pecho,
-            brazo: entry.brazo,
-            cintura: entry.cintura,
-            cadera: entry.cadera,
+            peso: entry.peso || 0,
+            gluteo: entry.gluteo || 0,
+            pierna: entry.pierna || 0,
+            pantorrilla: entry.pantorrilla || 0,
+            hombros: entry.hombros || 0,
+            pecho: entry.pecho || 0,
+            brazo: entry.brazo || 0,
+            cintura: entry.cintura || 0,
+            cadera: entry.cadera || 0,
           };
         });
         setHistory(formatted);
@@ -93,7 +117,7 @@ export function PerimeterAnalytics() {
   const isNeutral = delta === 0;
 
   return (
-    <div className="w-full bg-slate-900/40 backdrop-blur-md rounded-[3.5rem] border border-slate-800 p-8 shadow-2xl flex flex-col lg:flex-row gap-8">
+    <div className="w-full bg-slate-900/40 backdrop-blur-md rounded-3xl border border-slate-800 p-8 shadow-2xl flex flex-col lg:flex-row gap-8">
       
       {/* PANEL LATERAL: SELECTOR DE MÚSCULOS */}
       <div className="w-full lg:w-1/3 flex flex-col">

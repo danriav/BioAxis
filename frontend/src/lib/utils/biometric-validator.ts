@@ -1,12 +1,21 @@
 // src/lib/utils/biometric-validator.ts
 
-export const validateBiometrics = (m: any) => {
+type BiometricInput = {
+  peso?: string | number;
+  altura?: string | number;
+  brazo?: string | number;
+  gluteo?: string | number;
+  pierna?: string | number;
+  genero?: string;
+};
+
+export const validateBiometrics = (m: BiometricInput) => {
   // Convertimos a números para comparar con seguridad
-  const peso = parseFloat(m.peso) || 0;
-  const altura = parseFloat(m.altura) || 0;
-  const brazo = parseFloat(m.brazo) || 0;
-  const gluteo = parseFloat(m.gluteo) || 0;
-  const pierna = parseFloat(m.pierna) || 0;
+  const peso = parseFloat(String(m.peso)) || 0;
+  const altura = parseFloat(String(m.altura)) || 0;
+  const brazo = parseFloat(String(m.brazo)) || 0;
+  const gluteo = parseFloat(String(m.gluteo)) || 0;
+  const pierna = parseFloat(String(m.pierna)) || 0;
   const genero = m.genero;
 
   if (peso <= 0 || altura <= 0) return null; // Ignorar si están vacíos
@@ -29,7 +38,7 @@ export const validateBiometrics = (m: any) => {
 
   // 4. CHECK DE ALTURA (Mínimo realismo)
   if (altura < 130 || altura > 230) {
-    return "La altura ingresada está fuera de los rangos de análisis de BioAxis.";
+    return "La altura ingresada está fuera de los rangos de análisis de Kalos.";
   }
 
   return null; // Todo OK

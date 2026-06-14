@@ -1,7 +1,8 @@
 // lib/actions/generate-routine.ts
 "use server";
 
-export async function generateAIWorkout(days: number, focus: string, userMetrics: any) {
+export async function generateAIWorkout(days: number, focus: string, _userMetrics: unknown) {
+  void _userMetrics;
   // 1. Imprimimos en consola para que sepas que el servidor recibió el click
   console.log(`[SIMULADOR IA] Generando rutina de ${days} días enfocada en: ${focus}`);
 
@@ -15,7 +16,7 @@ export async function generateAIWorkout(days: number, focus: string, userMetrics
     generatedPlan: [
       {
         dayNumber: 1,
-        dayLabel: focus === 'legs' ? "Tren Inferior (Foco Cuádriceps)" : "Torso Alpha (Empuje)",
+        dayLabel: focus === 'legs' ? "Tren Inferior (Foco Cuádriceps)" : "Torso Kalos (Empuje)",
         totalDayMins: 55,
         exercises: [
           {

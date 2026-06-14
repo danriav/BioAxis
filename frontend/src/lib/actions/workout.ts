@@ -1,6 +1,14 @@
 import { getSupabaseClient } from "@/lib/supabase/client";
 
-export async function registerWorkout(workoutData: any) {
+type WorkoutLogPayload = {
+  nombre_sesion: string;
+  volumen_total_kg: number;
+  duracion_minutos: number;
+  esfuerzo_percibido_rpe: number;
+  fecha_entrenamiento: string;
+};
+
+export async function registerWorkout(workoutData: WorkoutLogPayload) {
   const supabase = getSupabaseClient();
   
   if (!supabase) {
