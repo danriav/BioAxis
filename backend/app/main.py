@@ -1,4 +1,5 @@
 import os
+from datetime import date as date_type
 from functools import lru_cache
 from pathlib import Path
 
@@ -7,6 +8,13 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, sta
 from fastapi.middleware.cors import CORSMiddleware
 from supabase import Client, create_client
 
+from app.schemas.biometric import (
+    MobileAthleteProfile,
+    MobileMeasurementCreateRequest,
+    MobileProfileMeResponse,
+    MobileProfileMutationResponse,
+    MobileProfileSetupRequest,
+)
 from app.schemas.nutrition_api import (
     FoodSearchItem,
     JsonDate,
@@ -259,6 +267,151 @@ async def reject_client_user_id(request: Request) -> None:
         )
 
 
+def _age_from_birth_date(birth_date: date_type) -> int:
+    today = date_type.today()
+    age = today.year - birth_date.year
+    if (today.month, today.day) < (birth_date.month, birth_date.day):
+        age -= 1
+    return age
+
+
+def _profile_float(row: dict, field: str) -> float | None:
+    value = _optional_float(row.get(field))
+    return value if value is not None else None
+
+
+def build_mobile_athlete_profile(row: dict, *, display_name: str | None = None) -> MobileAthleteProfile:
+    return MobileAthleteProfile(
+        biometria_id=str(row.get("biometria_id")) if row.get("biometria_id") is not None else None,
+        display_name=display_name,
+        genero=row.get("genero"),
+        edad=int(row["edad"]) if row.get("edad") is not None else None,
+        peso=_profile_float(row, "peso"),
+        altura=_profile_float(row, "altura"),
+        hombros=_profile_float(row, "hombros"),
+        pecho=_profile_float(row, "pecho"),
+        brazo=_profile_float(row, "brazo"),
+        antebrazo=_profile_float(row, "antebrazo"),
+        cintura=_profile_float(row, "cintura"),
+        cadera=_profile_float(row, "cadera"),
+        gluteo=_profile_float(row, "gluteo"),
+        pierna=_profile_float(row, "pierna"),
+        pantorrilla=_profile_float(row, "pantorrilla"),
+        objetivo_metabolico=row.get("objetivo_metabolico"),
+        dias_entrenamiento_semana=(
+            int(row["dias_entrenamiento_semana"])
+            if row.get("dias_entrenamiento_semana") is not None
+            else None
+        ),
+        is_current=bool(row.get("is_current", False)),
+    )
+
+
+def get_current_mobile_profile_row(current_user_id: str) -> dict | None:
+    result = (
+        supabase.table("dim_atleta")
+        .select("*")
+        .eq("user_id", current_user_id)
+        .eq("is_current", True)
+        .execute()
+    )
+    if not result.data:
+        return None
+    return result.data[0]
+
+
+def get_profile_display_name(current_user_id: str) -> str | None:
+    try:
+        result = (
+            supabase.table("user_profiles")
+            .select("display_name")
+            .eq("user_id", current_user_id)
+            .execute()
+        )
+    except Exception:
+        return None
+    if not result.data:
+        return None
+    display_name = result.data[0].get("display_name")
+    return str(display_name) if display_name else None
+
+
+def replace_current_dim_atleta_profile(payload: dict, *, display_name: str | None = None) -> MobileAthleteProfile:
+    try:
+        rpc_payload = {
+            key: value
+            for key, value in payload.items()
+            if key not in {"user_id", "is_current", "biometria_id", "valid_from", "valid_to", "created_at"}
+        }
+        result = (
+            supabase.rpc(
+                "replace_current_dim_atleta",
+                {
+                    "p_user_id": str(payload["user_id"]),
+                    "p_profile": rpc_payload,
+                },
+            )
+            .execute()
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not safely replace biometric profile",
+        ) from exc
+
+    if not result.data:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not safely replace biometric profile",
+        )
+    row = result.data[0] if isinstance(result.data, list) else result.data
+    return build_mobile_athlete_profile(row, display_name=display_name)
+
+
+def setup_payload_for_dim_atleta(
+    *,
+    request: MobileProfileSetupRequest,
+    current_user_id: str,
+) -> dict:
+    payload = request.model_dump(exclude={"display_name", "fecha_nacimiento"}, exclude_none=True)
+    payload["user_id"] = current_user_id
+    payload["edad"] = request.edad if request.edad is not None else _age_from_birth_date(request.fecha_nacimiento)
+    payload["is_current"] = True
+    return payload
+
+
+def measurement_payload_for_dim_atleta(
+    *,
+    current_row: dict,
+    request: MobileMeasurementCreateRequest,
+    current_user_id: str,
+) -> dict:
+    payload = {
+        key: current_row.get(key)
+        for key in (
+            "genero",
+            "edad",
+            "altura",
+            "hombros",
+            "pecho",
+            "brazo",
+            "antebrazo",
+            "cintura",
+            "cadera",
+            "gluteo",
+            "pierna",
+            "pantorrilla",
+            "objetivo_metabolico",
+            "dias_entrenamiento_semana",
+        )
+    }
+    payload["peso"] = request.peso
+    payload.update(request.model_dump(exclude_none=True))
+    payload["user_id"] = current_user_id
+    payload["is_current"] = True
+    return payload
+
+
 def calculate_nutrition_targets_for_user(current_user_id: str) -> NutritionTargetsResponse:
     query = (
         supabase.table("dim_atleta")
@@ -370,6 +523,53 @@ def build_nutrition_log_mutation_response(row: dict) -> NutritionLogMutationResp
         quantity_g=_nutrition_float(row.get("quantity_g")),
         consumed_at=row.get("consumed_at"),
     )
+
+
+@app.get("/profile/me", response_model=MobileProfileMeResponse)
+async def get_mobile_profile(
+    current_user_id: str = Depends(get_current_user_id),
+    _: None = Depends(reject_client_user_id),
+):
+    row = get_current_mobile_profile_row(current_user_id)
+    if row is None:
+        return MobileProfileMeResponse(status="empty", has_profile=False, profile=None)
+    return MobileProfileMeResponse(
+        status="ready",
+        has_profile=True,
+        profile=build_mobile_athlete_profile(
+            row,
+            display_name=get_profile_display_name(current_user_id),
+        ),
+    )
+
+
+@app.post("/profile/setup", response_model=MobileProfileMutationResponse)
+async def setup_mobile_profile(
+    request: MobileProfileSetupRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    _: None = Depends(reject_client_user_id),
+):
+    payload = setup_payload_for_dim_atleta(request=request, current_user_id=current_user_id)
+    profile = replace_current_dim_atleta_profile(payload, display_name=request.display_name)
+    return MobileProfileMutationResponse(status="success", profile=profile)
+
+
+@app.post("/profile/measurements", response_model=MobileProfileMutationResponse)
+async def create_mobile_measurement(
+    request: MobileMeasurementCreateRequest,
+    current_user_id: str = Depends(get_current_user_id),
+    _: None = Depends(reject_client_user_id),
+):
+    current_row = get_current_mobile_profile_row(current_user_id)
+    if current_row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Current biometric profile not found")
+    payload = measurement_payload_for_dim_atleta(
+        current_row=current_row,
+        request=request,
+        current_user_id=current_user_id,
+    )
+    profile = replace_current_dim_atleta_profile(payload)
+    return MobileProfileMutationResponse(status="success", profile=profile)
 
 
 @app.get("/nutrition/search", response_model=list[FoodSearchItem])
