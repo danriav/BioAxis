@@ -2,7 +2,8 @@
 
 ## Authentication
 
-Nutrition endpoints are authenticated with `Authorization: Bearer <Supabase JWT>`.
+Profile, nutrition, and training endpoints are authenticated with
+`Authorization: Bearer <Supabase JWT>`.
 The backend uses the service-role Supabase client for database access, so routes
 must never trust `user_id` from request bodies. Each nutrition route resolves the
 caller through Supabase Auth and uses that authenticated `user_id` for all
@@ -30,6 +31,141 @@ checks: `http://localhost:3000`, `http://127.0.0.1:3000`,
 `http://localhost:5173`, and `http://127.0.0.1:5173`.
 
 Production must keep explicit origins and must not use universal CORS (`*`).
+
+## Profile endpoints
+
+### `GET /profile/me`
+
+Returns the authenticated user's current mobile biometric profile from
+`dim_atleta`.
+
+Response model: `MobileProfileMeResponse`
+
+Empty response:
+
+```json
+{
+  "status": "empty",
+  "has_profile": false,
+  "profile": null
+}
+```
+
+Ready response:
+
+```json
+{
+  "status": "ready",
+  "has_profile": true,
+  "profile": {
+    "biometria_id": "bio-uuid",
+    "display_name": "Ada",
+    "genero": "mujer",
+    "edad": 29,
+    "peso": 62.0,
+    "altura": 168.0,
+    "hombros": 102.0,
+    "pecho": 92.0,
+    "brazo": 29.0,
+    "antebrazo": 24.0,
+    "cintura": 72.0,
+    "cadera": 102.0,
+    "gluteo": 104.0,
+    "pierna": 58.0,
+    "pantorrilla": 36.0,
+    "objetivo_metabolico": "mantenimiento",
+    "dias_entrenamiento_semana": 4,
+    "is_current": true
+  }
+}
+```
+
+Authorization behavior:
+
+- Requires a valid bearer token.
+- Does not accept `user_id` in query or body.
+- Never returns `user_id`.
+
+### `POST /profile/setup`
+
+Creates the initial mobile biometric profile in `dim_atleta`. The backend calls
+the `public.replace_current_dim_atleta(p_user_id uuid, p_profile jsonb)` RPC and
+does not perform insert/close/delete compensation from FastAPI. The RPC must run
+inside Postgres as one transaction: take a per-user advisory transaction lock,
+close current rows, insert the new `is_current=true` row, and validate that
+exactly one current row remains. If any step fails, Postgres rolls the whole RPC
+back and the API returns a generic internal error.
+
+The RPC is an internal backend primitive, not a public client contract. The SQL
+script revokes execution from `PUBLIC`, `anon`, and `authenticated`, and grants
+execution only to `service_role`. Mobile and web clients must call
+`POST /profile/setup` or `POST /profile/measurements`; they must never call the
+RPC directly or send `user_id`.
+
+Request model: `MobileProfileSetupRequest`
+
+```json
+{
+  "display_name": "Ada",
+  "genero": "mujer",
+  "edad": 29,
+  "peso": 62.0,
+  "altura": 168.0,
+  "hombros": 102.0,
+  "pecho": 92.0,
+  "brazo": 29.0,
+  "antebrazo": 24.0,
+  "cintura": 72.0,
+  "cadera": 102.0,
+  "gluteo": 104.0,
+  "pierna": 58.0,
+  "pantorrilla": 36.0,
+  "objetivo_metabolico": "mantenimiento",
+  "dias_entrenamiento_semana": 4
+}
+```
+
+`fecha_nacimiento` can be sent instead of `edad`; the backend calculates age.
+
+Response model: `MobileProfileMutationResponse`
+
+Authorization behavior:
+
+- Requires a valid bearer token.
+- Inserts `user_id` from the validated Supabase JWT.
+- Rejects `user_id` in query/body with `422`.
+- Rejects invalid biometric ranges with `422`.
+- Does not write to `user_profiles` in this phase; `display_name` is accepted
+  for mobile response compatibility and `user_profiles` synchronization remains
+  a follow-up contract.
+
+### `POST /profile/measurements`
+
+Creates a new SCD2 biometric measurement in `dim_atleta` for the authenticated
+user. The backend reads the current row, copies stable fields such as `genero`,
+`edad`, and `altura`, then delegates replacement to
+`public.replace_current_dim_atleta(p_user_id uuid, p_profile jsonb)`. The
+endpoint depends on the RPC atomicity guarantee described for
+`POST /profile/setup`; it does not rely on best-effort compensating deletes.
+
+Request model: `MobileMeasurementCreateRequest`
+
+```json
+{
+  "peso": 63.5,
+  "cintura": 70.0,
+  "gluteo": 106.0
+}
+```
+
+Response model: `MobileProfileMutationResponse`
+
+Authorization behavior:
+
+- Requires a valid bearer token.
+- Does not accept `user_id` in query/body.
+- Rejects invalid biometric ranges with `422`.
+- Returns `404` when no current biometric profile exists.
 
 ## Nutrition endpoints
 

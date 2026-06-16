@@ -4,17 +4,17 @@ Fecha: 2026-06-10
 
 ## Resumen ejecutivo
 
-El backend actual puede servir una app movil real solo de forma parcial. Los
-flujos de nutricion basicos y el preview/sustitucion Kalos ya tienen endpoints
-FastAPI autenticados con JWT Supabase, contratos Pydantic y proteccion contra
-`user_id` enviado por el cliente. Sin embargo, perfil/biometria, dashboard,
-historial de medidas, listado de ejercicios, logging de entrenamiento y borrado
-o lectura diaria de nutricion siguen dependiendo de Supabase directo desde
+El backend actual puede servir una app movil real de forma parcial pero cada vez
+mas completa. Perfil/onboarding biometrico, nutricion basica y preview/
+sustitucion Kalos ya tienen endpoints FastAPI autenticados con JWT Supabase,
+contratos Pydantic y proteccion contra `user_id` enviado por el cliente. Sin
+embargo, dashboard, historial completo de medidas, listado de ejercicios y
+logging de entrenamiento siguen dependiendo de Supabase directo desde
 `frontend/src` o de estado local del navegador.
 
-Dictamen: listo para un MVP movil de preview Kalos + busqueda/agregado basico de
-nutricion. No listo para una app movil completa sin exponer endpoints backend
-adicionales.
+Dictamen: listo para un MVP movil con onboarding biometrico, nutricion diaria y
+preview Kalos. No listo para una app movil completa sin exponer dashboard,
+historial completo y entrenamiento persistido.
 
 ## Endpoints backend actuales
 
@@ -32,7 +32,9 @@ adicionales.
 | Entrenamiento | `POST /training/kalos/preview` | Listo | Autenticado, sin persistencia, usa biometria real de `dim_atleta` si existe. |
 | Entrenamiento | `POST /training/kalos/substitute` | Listo | Autenticado, no persiste, no llama IA. |
 | Auth | Ninguno propio | Depende de Supabase | La app movil debe usar Supabase Auth directamente para login/refresh/logout. |
-| Perfil/biometria | Ninguno | Falta | El web escribe/lee `dim_atleta` directo desde Supabase. |
+| Perfil/biometria | `GET /profile/me` | Listo | Devuelve perfil actual o empty controlado sin exponer `user_id`. |
+| Perfil/biometria | `POST /profile/setup` | Listo | Crea perfil inicial en `dim_atleta`; no acepta `user_id`. |
+| Perfil/biometria | `POST /profile/measurements` | Listo | Crea nueva medicion SCD2 cerrando la actual. |
 | Dashboard | Ninguno | Falta | El web arma el dashboard con queries directas a Supabase y logica local. |
 | Catalogo ejercicios | Ninguno | Falta | El web lee `exercises` directo desde Supabase. |
 | Workout logging | Ninguno | Falta | El web escribe `fact_entrenamientos` directo desde Supabase. |
@@ -85,7 +87,8 @@ Recomendacion:
 | `user_id` en query/body de `/nutrition/logs` | `422` | Listo. |
 | PATCH/DELETE de log ajeno o inexistente | `404` | Listo; no filtra existencia cross-user. |
 | `user_id` extra en body nutricion/Kalos | `422` | Listo. |
-| Perfil/biometria inexistente en targets | `200` con macros fallback | Riesgo de producto: movil no sabe si debe pedir perfil. |
+| Perfil/biometria inexistente en `/profile/me` | `200` con `status=empty` | Listo. |
+| Perfil/biometria inexistente en targets | `200` con macros fallback | Riesgo de producto: mobile debe preferir `/profile/me` para decidir onboarding. |
 | Perfil/biometria inexistente en Kalos preview | `200` con `biometric_focus="unknown"` | Aceptable para preview, pero falta senal explicita `profile_missing`. |
 | Plan Kalos no seguro/catalogo insuficiente | `422` con `detail.code` | Listo. |
 | Sync nutrition sin comidas origen | `404` controlado | Listo. |
@@ -100,6 +103,88 @@ Para movil conviene normalizar errores como:
 ```
 
 ## Contratos JSON listos para React Native
+
+### Perfil
+
+`GET /profile/me`
+
+Respuesta empty:
+
+```json
+{
+  "status": "empty",
+  "has_profile": false,
+  "profile": null
+}
+```
+
+Respuesta con perfil:
+
+```json
+{
+  "status": "ready",
+  "has_profile": true,
+  "profile": {
+    "biometria_id": "bio-uuid",
+    "display_name": "Ada",
+    "genero": "mujer",
+    "edad": 29,
+    "peso": 62,
+    "altura": 168,
+    "hombros": 102,
+    "pecho": 92,
+    "brazo": 29,
+    "antebrazo": 24,
+    "cintura": 72,
+    "cadera": 102,
+    "gluteo": 104,
+    "pierna": 58,
+    "pantorrilla": 36,
+    "objetivo_metabolico": "mantenimiento",
+    "dias_entrenamiento_semana": 4,
+    "is_current": true
+  }
+}
+```
+
+`POST /profile/setup`
+
+```json
+{
+  "display_name": "Ada",
+  "genero": "mujer",
+  "edad": 29,
+  "peso": 62,
+  "altura": 168,
+  "hombros": 102,
+  "pecho": 92,
+  "brazo": 29,
+  "antebrazo": 24,
+  "cintura": 72,
+  "cadera": 102,
+  "gluteo": 104,
+  "pierna": 58,
+  "pantorrilla": 36,
+  "objetivo_metabolico": "mantenimiento",
+  "dias_entrenamiento_semana": 4
+}
+```
+
+`POST /profile/measurements`
+
+```json
+{
+  "peso": 63.5,
+  "cintura": 70,
+  "gluteo": 106
+}
+```
+
+Los endpoints de perfil no aceptan `user_id`. `POST /profile/setup` y
+`POST /profile/measurements` mantienen compatibilidad con `dim_atleta` usando
+SCD2 (`is_current=false`, `valid_to`, nuevo registro `is_current=true`).
+`user_profiles` no se sincroniza en esta fase; queda como contrato posterior
+porque la web lo usa para `display_name`.
 
 ### Nutricion
 
@@ -330,23 +415,14 @@ Debe moverse al backend o duplicarse temporalmente para movil:
 
 ### P0 - Necesarios para app movil real
 
-1. `GET /profile/me`
-   - Devuelve identidad de perfil, display name, perfil actual y flags:
-     `has_profile`, `has_current_biometrics`.
-2. `POST /profile/biometrics`
-   - Crea nueva version SCD2 en `dim_atleta` usando `current_user_id`.
-   - No acepta `user_id`.
-   - Reusa validaciones estrictas de rango backend.
-3. `GET /profile/biometrics/current`
-   - Devuelve biometria actual o `404/409 profile_required`.
-4. `GET /profile/biometrics/history`
+1. `GET /profile/biometrics/history`
    - Sustituye queries directas de dashboard charts.
-5. `GET /dashboard/summary`
+2. `GET /dashboard/summary`
    - Devuelve snapshot actual, targets nutricionales, ratios y mensajes de
      perfil incompleto en un solo contrato movil.
-6. `GET /training/exercises`
+3. `GET /training/exercises`
    - Devuelve catalogo filtrable para logging manual.
-7. `POST /training/logs`
+4. `POST /training/logs`
    - Registra entrenamiento ejecutado con `current_user_id` y biometria actual.
 
 ### P1 - Calidad de producto movil
@@ -395,6 +471,9 @@ Debe moverse al backend o duplicarse temporalmente para movil:
 - `PATCH /nutrition/logs/{log_id}`
 - `DELETE /nutrition/logs/{log_id}`
 - `GET /nutrition/targets/me`
+- `GET /profile/me`
+- `POST /profile/setup`
+- `POST /profile/measurements`
 
 ### Usable con ajuste menor
 

@@ -141,3 +141,23 @@ def test_anthropometric_ranges_are_consistent_in_sql_layers() -> None:
     for expected_range in expected_ranges:
         assert expected_range in schema
         assert expected_range in supabase
+
+
+def test_dim_atleta_replacement_rpc_is_backend_only() -> None:
+    rpc_sql = (SQL_DIR / "replace_current_dim_atleta_rpc.sql").read_text(encoding="utf-8")
+    function_signature = "public.replace_current_dim_atleta(uuid, jsonb)"
+
+    assert "CREATE OR REPLACE FUNCTION public.replace_current_dim_atleta(" in rpc_sql
+    assert "p_user_id uuid" in rpc_sql
+    assert "p_profile jsonb" in rpc_sql
+    assert "SECURITY DEFINER" in rpc_sql
+    assert "pg_advisory_xact_lock" in rpc_sql
+    assert f"REVOKE ALL ON FUNCTION {function_signature} FROM PUBLIC;" in rpc_sql
+    assert f"REVOKE ALL ON FUNCTION {function_signature} FROM anon;" in rpc_sql
+    assert f"REVOKE ALL ON FUNCTION {function_signature} FROM authenticated;" in rpc_sql
+    assert f"GRANT EXECUTE ON FUNCTION {function_signature} TO service_role;" in rpc_sql
+    assert "GRANT EXECUTE ON FUNCTION public.replace_current_dim_atleta(uuid, jsonb) TO anon;" not in rpc_sql
+    assert (
+        "GRANT EXECUTE ON FUNCTION public.replace_current_dim_atleta(uuid, jsonb) TO authenticated;"
+        not in rpc_sql
+    )
