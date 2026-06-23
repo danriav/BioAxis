@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.biometric import UserProfileCreate
+from app.schemas.biometric import MobileBiometricHistoryEntry, UserProfileCreate
 from app.schemas.core import SyncQueueCreate
 from app.schemas.nutrition import FoodItemCreate
 from app.schemas.nutrition_log import NutritionLogEntryCreate
@@ -106,4 +107,22 @@ def test_sync_queue_schema_rejects_unknown_operation() -> None:
             entity_id=uuid4(),
             operation="merge",
             payload={},
+        )
+
+
+def test_biometric_history_schema_is_strict_and_forbids_internal_fields() -> None:
+    with pytest.raises(ValidationError):
+        MobileBiometricHistoryEntry(
+            recorded_at=datetime.now(timezone.utc),
+            is_current=True,
+            genero="mujer",
+            ratio_simetria="1.08",
+        )
+
+    with pytest.raises(ValidationError):
+        MobileBiometricHistoryEntry(
+            recorded_at=datetime.now(timezone.utc),
+            is_current=True,
+            genero="mujer",
+            user_id="not-allowed",
         )

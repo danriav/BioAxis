@@ -38,6 +38,8 @@ class FakeTable:
         self.insert_payload: dict[str, Any] | None = None
         self.update_payload: dict[str, Any] | None = None
         self.delete_requested = False
+        self.order_column: str | None = None
+        self.order_desc = False
 
     def select(self, columns: str) -> "FakeTable":
         self.client.calls.append(("select", self.name, columns))
@@ -51,6 +53,12 @@ class FakeTable:
     def neq(self, column: str, value: Any) -> "FakeTable":
         self.not_filters.append((column, value))
         self.client.calls.append(("neq", self.name, column, value))
+        return self
+
+    def order(self, column: str, *, desc: bool = False) -> "FakeTable":
+        self.order_column = column
+        self.order_desc = desc
+        self.client.calls.append(("order", self.name, column, desc))
         return self
 
     def update(self, payload: dict[str, Any]) -> "FakeTable":
@@ -94,6 +102,9 @@ class FakeTable:
 
         if self.name != "dim_atleta":
             return FakeResult([])
+
+        if self.client.fail_profile_read and self.insert_payload is None and self.update_payload is None:
+            raise RuntimeError("sensitive database detail")
 
         if self.update_payload is not None:
             if self.client.fail_close:
@@ -139,7 +150,13 @@ class FakeTable:
             self.client.current_profile = current_rows[-1] if current_rows else None
             return FakeResult(to_delete)
 
-        return FakeResult(self._filtered_profile_rows())
+        rows = self._filtered_profile_rows()
+        if self.order_column is not None:
+            rows.sort(
+                key=lambda row: row.get(self.order_column) or "",
+                reverse=self.order_desc,
+            )
+        return FakeResult(rows)
 
 
 class FakeRpc:
@@ -195,6 +212,7 @@ class FakeSupabase:
         self.fail_close = False
         self.fail_delete = False
         self.fail_rpc = False
+        self.fail_profile_read = False
 
     def table(self, name: str) -> FakeTable:
         self.calls.append(("table", name))
@@ -266,6 +284,16 @@ def current_profile(**overrides: Any) -> dict[str, Any]:
         "dias_entrenamiento_semana": 4,
         "is_current": True,
     }
+    return profile | overrides
+
+
+def history_profile(**overrides: Any) -> dict[str, Any]:
+    profile = current_profile(
+        biometria_id="bio-history",
+        valid_from="2026-06-18T12:00:00Z",
+        created_at="2026-06-18T12:00:00Z",
+        is_current=False,
+    )
     return profile | overrides
 
 
@@ -539,6 +567,203 @@ def test_profile_routes_do_not_print_sensitive_biometrics(
     client, _ = profile_client
 
     response = client.post("/profile/setup", headers=AUTH_HEADERS, json=valid_setup_payload())
+    captured = capsys.readouterr()
+
+    assert response.status_code == 200
+    assert captured.out == ""
+    assert captured.err == ""
+
+
+def test_profile_history_calculates_female_ratios_and_orders_chronologically(
+    profile_client: tuple[TestClient, FakeSupabase],
+) -> None:
+    client, fake_supabase = profile_client
+    fake_supabase.profiles = [
+        history_profile(
+            biometria_id="newer",
+            valid_from="2026-06-18T12:00:00Z",
+            hombros=104.0,
+            cintura=72.0,
+            cadera=96.0,
+            is_current=True,
+        ),
+        history_profile(
+            biometria_id="older",
+            valid_from="2026-05-18T12:00:00Z",
+            hombros=100.0,
+            cintura=75.0,
+            cadera=100.0,
+        ),
+    ]
+
+    response = client.get("/profile/history", headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["count"] == 2
+    assert [entry["recorded_at"] for entry in body["entries"]] == [
+        "2026-05-18T12:00:00Z",
+        "2026-06-18T12:00:00Z",
+    ]
+    assert body["entries"][0]["ratio_simetria"] == 1.0
+    assert body["entries"][0]["ratio_curvatura"] == 0.75
+    assert body["entries"][1]["ratio_simetria"] == 1.08
+    assert body["entries"][1]["ratio_curvatura"] == 0.75
+    assert ("eq", "dim_atleta", "user_id", "auth-user") in fake_supabase.calls
+    assert ("order", "dim_atleta", "valid_from", False) in fake_supabase.calls
+
+
+def test_profile_history_calculates_male_ratio_without_curvature(
+    profile_client: tuple[TestClient, FakeSupabase],
+) -> None:
+    client, fake_supabase = profile_client
+    fake_supabase.profiles = [
+        history_profile(genero="hombre", hombros=138.0, cintura=90.0, cadera=100.0),
+    ]
+
+    response = client.get("/profile/history", headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    entry = response.json()["entries"][0]
+    assert entry["ratio_simetria"] == 1.53
+    assert entry["ratio_curvatura"] is None
+
+
+def test_profile_history_returns_controlled_empty_response(
+    profile_client: tuple[TestClient, FakeSupabase],
+) -> None:
+    client, fake_supabase = profile_client
+    fake_supabase.profiles = []
+    fake_supabase.current_profile = None
+
+    response = client.get("/profile/history", headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "empty", "count": 0, "entries": []}
+
+
+@pytest.mark.parametrize(
+    ("headers", "expected_status"),
+    [
+        ({}, 401),
+        ({"Authorization": "Bearer invalid-token"}, 401),
+        ({"Authorization": "Bearer expired-token"}, 401),
+    ],
+)
+def test_profile_history_rejects_missing_invalid_or_expired_jwt(
+    profile_client: tuple[TestClient, FakeSupabase],
+    headers: dict[str, str],
+    expected_status: int,
+) -> None:
+    client, _ = profile_client
+
+    response = client.get("/profile/history", headers=headers)
+
+    assert response.status_code == expected_status
+
+
+def test_profile_history_rejects_client_user_id_in_query_header_and_body(
+    profile_client: tuple[TestClient, FakeSupabase],
+) -> None:
+    client, _ = profile_client
+
+    query_response = client.get(
+        "/profile/history?user_id=other-user",
+        headers=AUTH_HEADERS,
+    )
+    header_response = client.get(
+        "/profile/history",
+        headers=AUTH_HEADERS | {"X-User-Id": "other-user"},
+    )
+    body_response = client.request(
+        "GET",
+        "/profile/history",
+        headers=AUTH_HEADERS,
+        json={"user_id": "other-user"},
+    )
+
+    assert query_response.status_code == 422
+    assert header_response.status_code == 422
+    assert body_response.status_code == 422
+
+
+def test_profile_history_isolates_authenticated_user(
+    profile_client: tuple[TestClient, FakeSupabase],
+) -> None:
+    client, fake_supabase = profile_client
+    fake_supabase.profiles = [
+        history_profile(biometria_id="own", user_id="auth-user", peso=62.0),
+        history_profile(biometria_id="other", user_id="other-user", peso=99.0),
+    ]
+
+    response = client.get("/profile/history", headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["count"] == 1
+    assert body["entries"][0]["peso"] == 62.0
+    assert ("eq", "dim_atleta", "user_id", "other-user") not in fake_supabase.calls
+
+
+def test_profile_history_handles_zero_or_incomplete_measurements(
+    profile_client: tuple[TestClient, FakeSupabase],
+) -> None:
+    client, fake_supabase = profile_client
+    fake_supabase.profiles = [
+        history_profile(cadera=0.0),
+        history_profile(
+            biometria_id="missing",
+            valid_from="2026-06-19T12:00:00Z",
+            hombros=None,
+            cintura=None,
+            cadera=None,
+        ),
+    ]
+
+    response = client.get("/profile/history", headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    for entry in response.json()["entries"]:
+        assert entry["ratio_simetria"] is None
+        assert entry["ratio_curvatura"] is None
+
+
+def test_profile_history_response_excludes_internal_identifiers(
+    profile_client: tuple[TestClient, FakeSupabase],
+) -> None:
+    client, fake_supabase = profile_client
+    fake_supabase.profiles = [history_profile()]
+
+    response = client.get("/profile/history", headers=AUTH_HEADERS)
+
+    assert response.status_code == 200
+    serialized = response.text
+    assert "user_id" not in serialized
+    assert "biometria_id" not in serialized
+
+
+def test_profile_history_returns_sanitized_supabase_error(
+    profile_client: tuple[TestClient, FakeSupabase],
+) -> None:
+    client, fake_supabase = profile_client
+    fake_supabase.fail_profile_read = True
+
+    response = client.get("/profile/history", headers=AUTH_HEADERS)
+
+    assert response.status_code == 502
+    assert response.json() == {"detail": "Could not load biometric history"}
+    assert "sensitive database detail" not in response.text
+
+
+def test_profile_history_does_not_print_sensitive_biometrics(
+    profile_client: tuple[TestClient, FakeSupabase],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    client, fake_supabase = profile_client
+    fake_supabase.profiles = [history_profile()]
+
+    response = client.get("/profile/history", headers=AUTH_HEADERS)
     captured = capsys.readouterr()
 
     assert response.status_code == 200

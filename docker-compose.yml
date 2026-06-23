@@ -7,6 +7,7 @@ services:
       - ./backend/.env
     volumes:
       - ./backend:/app # Hot-reload: Cambias código y se actualiza solo
+      - ./docs:/docs:ro # Catálogo Kalos disponible sin copiar archivos al contenedor
 
   frontend:
     build: ./frontend

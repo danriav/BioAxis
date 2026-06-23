@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -124,3 +124,27 @@ class MobileProfileMeResponse(StrictSchema):
 class MobileProfileMutationResponse(StrictSchema):
     status: Literal["success"]
     profile: MobileAthleteProfile
+
+
+class MobileBiometricHistoryEntry(StrictSchema):
+    recorded_at: datetime
+    is_current: bool
+    genero: Literal["hombre", "mujer"] | None = None
+    peso: float | None = None
+    hombros: float | None = None
+    pecho: float | None = None
+    brazo: float | None = None
+    antebrazo: float | None = None
+    cintura: float | None = None
+    cadera: float | None = None
+    gluteo: float | None = None
+    pierna: float | None = None
+    pantorrilla: float | None = None
+    ratio_simetria: float | None = None
+    ratio_curvatura: float | None = None
+
+
+class MobileBiometricHistoryResponse(StrictSchema):
+    status: Literal["empty", "ready"]
+    count: Annotated[int, Field(ge=0)]
+    entries: list[MobileBiometricHistoryEntry]

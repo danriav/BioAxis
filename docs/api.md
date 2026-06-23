@@ -86,6 +86,67 @@ Authorization behavior:
 - Does not accept `user_id` in query or body.
 - Never returns `user_id`.
 
+### `GET /profile/history`
+
+Returns the authenticated user's complete `dim_atleta` history in chronological
+ascending order. Identity is derived only from the validated Supabase JWT.
+
+Response model: `MobileBiometricHistoryResponse`
+
+```json
+{
+  "status": "ready",
+  "count": 1,
+  "entries": [
+    {
+      "recorded_at": "2026-06-18T12:00:00Z",
+      "is_current": true,
+      "genero": "mujer",
+      "peso": 62.0,
+      "hombros": 104.0,
+      "pecho": 90.0,
+      "brazo": 30.0,
+      "antebrazo": 24.0,
+      "cintura": 72.0,
+      "cadera": 96.0,
+      "gluteo": 101.0,
+      "pierna": 55.0,
+      "pantorrilla": 35.0,
+      "ratio_simetria": 1.08,
+      "ratio_curvatura": 0.75
+    }
+  ]
+}
+```
+
+An empty history returns `200` with:
+
+```json
+{
+  "status": "empty",
+  "count": 0,
+  "entries": []
+}
+```
+
+Ratio rules:
+
+- Female symmetry: `hombros / cadera`.
+- Female curvature: `cintura / cadera`.
+- Male symmetry: `hombros / cintura`.
+- Male curvature: `null`.
+- Missing values or zero/non-positive denominators produce `null`.
+- Ratios are rounded to two decimal places.
+
+Authorization and error behavior:
+
+- Requires a valid bearer token; missing, invalid, or expired tokens return `401`.
+- Rejects client-provided `user_id` in query, headers, or body with `422`.
+- Filters only by the authenticated user and never returns `user_id` or
+  `biometria_id`.
+- A Supabase read failure returns sanitized `502` without provider details.
+- The endpoint performs no writes and does not log biometric rows or responses.
+
 ### `POST /profile/setup`
 
 Creates the initial mobile biometric profile in `dim_atleta`. The backend calls

@@ -42,7 +42,7 @@ async function parseJsonResponse<TResponse>(response: Response): Promise<TRespon
   }
 
   if (response.status === 403) {
-    throw new MobileApiError("forbidden", "No tienes permiso para ver esta informacion.", 403);
+    throw new MobileApiError("forbidden", "No tienes permiso para ver esta información.", 403);
   }
 
   if (response.status === 404) {
@@ -54,7 +54,7 @@ async function parseJsonResponse<TResponse>(response: Response): Promise<TRespon
   }
 
   if (!response.ok) {
-    throw new MobileApiError("unexpected_error", "No pudimos cargar la informacion solicitada.", response.status);
+    throw new MobileApiError("unexpected_error", "No pudimos cargar la información solicitada.", response.status);
   }
 
   return response.json() as Promise<TResponse>;

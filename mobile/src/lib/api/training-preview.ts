@@ -24,6 +24,39 @@ export type TrainingEquipment =
   | "machine"
   | "smith";
 
+export type TrainingMovementPattern =
+  | "calf_raise"
+  | "cardio_hiit"
+  | "cardio_liss"
+  | "core_flexion"
+  | "core_stability"
+  | "elbow_extension"
+  | "elbow_flexion"
+  | "hinge"
+  | "hip_abduction"
+  | "hip_adduction"
+  | "hip_thrust"
+  | "horizontal_pull"
+  | "horizontal_push"
+  | "knee_extension"
+  | "knee_flexion"
+  | "rear_delt"
+  | "shoulder_abduction"
+  | "squat"
+  | "vertical_pull"
+  | "vertical_push";
+
+export type TrainingExerciseRole =
+  | "anchor"
+  | "cardio"
+  | "finisher"
+  | "isolation"
+  | "primary_accessory"
+  | "secondary_accessory"
+  | "warmup";
+
+export type TrainingFatigueCost = "high" | "low" | "medium";
+
 export type TrainingPreviewPayload = {
   days_per_week: number;
   goal: TrainingGoal;
@@ -49,8 +82,15 @@ export type TrainingPreviewExercise = {
   rep_range: TrainingRange;
   rir_target: TrainingRange;
   rest_seconds: number;
-  fatigue_cost: "high" | "low" | "medium";
+  fatigue_cost: TrainingFatigueCost;
   equipment: TrainingEquipment;
+  movement_pattern?: TrainingMovementPattern;
+  role?: TrainingExerciseRole;
+  joint_stress?: string[];
+  substitution_group?: string;
+  weekly_set_contribution?: Record<string, number>;
+  repeat_justification?: string | null;
+  coaching_note?: string | null;
 };
 
 export type TrainingPreviewSession = {
@@ -79,6 +119,36 @@ export type TrainingPreviewResponse = {
   };
 };
 
+export type TrainingSubstitutionSessionContext = {
+  goal: TrainingGoal;
+  experience: TrainingExperience;
+  priority: TrainingPriority;
+  label: string;
+  intent: string;
+  target_muscles: string[];
+};
+
+export type TrainingSubstitutionPayload = {
+  current_exercise_id: string;
+  current_session: TrainingSubstitutionSessionContext;
+  available_equipment: TrainingEquipment[];
+  excluded_exercise_ids: string[];
+  constraints: Record<string, never>;
+  movement_pattern?: TrainingMovementPattern;
+  role?: TrainingExerciseRole;
+  primary_muscle?: string;
+  fatigue_cost?: TrainingFatigueCost;
+  sets?: number;
+};
+
+export type TrainingSubstitutionResponse = {
+  current_exercise_id: string;
+  substitute_exercise: TrainingPreviewExercise;
+  equivalence: "exact" | "partial";
+  equivalence_score: number;
+  warnings: string[];
+};
+
 export function postTrainingPreview(
   session: Pick<Session, "access_token"> | null,
   payload: TrainingPreviewPayload,
@@ -86,6 +156,17 @@ export function postTrainingPreview(
 ) {
   return createApiClient({ fetcher, session }).postJson<TrainingPreviewResponse, TrainingPreviewPayload>(
     "/training/kalos/preview",
+    payload
+  );
+}
+
+export function postTrainingSubstitution(
+  session: Pick<Session, "access_token"> | null,
+  payload: TrainingSubstitutionPayload,
+  fetcher?: typeof fetch
+) {
+  return createApiClient({ fetcher, session }).postJson<TrainingSubstitutionResponse, TrainingSubstitutionPayload>(
+    "/training/kalos/substitute",
     payload
   );
 }

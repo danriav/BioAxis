@@ -1,6 +1,8 @@
 import {
+  getCaloriesSummary,
   getConsumedMacroCards,
   getLocalDateString,
+  getMacroProgressCards,
   getMealSections,
   getNutritionMacroCards,
   shiftDateString
@@ -48,26 +50,65 @@ describe("nutrition targets view model", () => {
     ]);
   });
 
-  it("groups meals from backend response and hides empty sections", () => {
+  it("formats calories consumed against backend target", () => {
+    expect(
+      getCaloriesSummary(
+        { carbs: 88.4, fat: 12.2, kcal: 612.7, protein: 41.6 },
+        { carbs: 220, fat: 70, kcal: 2100, protein: 160 }
+      )
+    ).toEqual({
+      label: "613 / 2100 kcal",
+      progressPercent: "29%",
+      progressRatio: 0.2919047619047619
+    });
+  });
+
+  it("caps calorie progress at 100 percent", () => {
+    expect(
+      getCaloriesSummary(
+        { carbs: 300, fat: 120, kcal: 2600, protein: 190 },
+        { carbs: 220, fat: 70, kcal: 2100, protein: 160 }
+      )
+    ).toMatchObject({
+      label: "2600 / 2100 kcal",
+      progressPercent: "100%",
+      progressRatio: 1
+    });
+  });
+
+  it("formats macro progress against backend targets", () => {
+    expect(
+      getMacroProgressCards(
+        { carbs: 88.4, fat: 12.2, kcal: 612.7, protein: 41.6 },
+        { carbs: 220, fat: 70, kcal: 2100, protein: 160 }
+      )
+    ).toEqual([
+      { title: "Proteína", value: "42 / 160 g" },
+      { title: "Carbohidratos", value: "88 / 220 g" },
+      { title: "Grasas", value: "12 / 70 g" }
+    ]);
+  });
+
+  it("groups meals from backend response and keeps empty MVP sections", () => {
+    const comidaItem = {
+      carbs: 66,
+      consumed_at: "2026-06-12",
+      fat: 7,
+      food_id: "food-1",
+      food_name: "Avena",
+      id: "log-1",
+      kcal: 389,
+      meal_slot: "comida",
+      protein: 17,
+      quantity_g: 100
+    };
+
     expect(
       getMealSections({
         date: "2026-06-12",
         items: [],
         meals: {
-          comida: [
-            {
-              carbs: 66,
-              consumed_at: "2026-06-12",
-              fat: 7,
-              food_id: "food-1",
-              food_name: "Avena",
-              id: "log-1",
-              kcal: 389,
-              meal_slot: "comida",
-              protein: 17,
-              quantity_g: 100
-            }
-          ],
+          comida: [comidaItem],
           cena: [],
           desayuno: [],
           snacks: []
@@ -75,23 +116,10 @@ describe("nutrition targets view model", () => {
         totals: { carbs: 66, fat: 7, kcal: 389, protein: 17 }
       })
     ).toEqual([
-      {
-        items: [
-          {
-            carbs: 66,
-            consumed_at: "2026-06-12",
-            fat: 7,
-            food_id: "food-1",
-            food_name: "Avena",
-            id: "log-1",
-            kcal: 389,
-            meal_slot: "comida",
-            protein: 17,
-            quantity_g: 100
-          }
-        ],
-        mealSlot: "comida"
-      }
+      { items: [], mealSlot: "desayuno", title: "Desayuno" },
+      { items: [comidaItem], mealSlot: "comida", title: "Comida" },
+      { items: [], mealSlot: "cena", title: "Cena" },
+      { items: [], mealSlot: "snacks", title: "Snacks" }
     ]);
   });
 

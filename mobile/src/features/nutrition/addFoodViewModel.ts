@@ -51,7 +51,7 @@ export function getFoodMacroSummary(food: FoodSearchItem) {
   const proteinPer100 = Math.round((food.protein_per_g ?? 0) * 100);
 
   if (kcalPer100 === 0 && proteinPer100 === 0) {
-    return food.category ?? "Catalogo nutricional";
+    return food.category ?? "Catálogo nutricional";
   }
 
   return `${kcalPer100} kcal / 100 g - ${proteinPer100} g proteína`;
@@ -59,7 +59,7 @@ export function getFoodMacroSummary(food: FoodSearchItem) {
 
 export function validateAddFoodForm(input: AddFoodFormInput): AddFoodValidationResult {
   if (!input.food?.id) {
-    return { message: "Selecciona un alimento de la busqueda.", status: "invalid" };
+    return { message: "Selecciona un alimento de la búsqueda.", status: "invalid" };
   }
 
   const quantity = Number(input.quantityText.replace(",", "."));

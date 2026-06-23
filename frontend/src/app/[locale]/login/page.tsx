@@ -20,33 +20,47 @@ export default function LoginPage() {
     setAuthMessage(null);
     setLoading(true);
 
-    const supabase = getSupabaseClient();
-    if (!supabase) {
-      setAuthMessage("No pudimos inicializar la sesion local.");
+    try {
+      const supabase = getSupabaseClient();
+      if (!supabase) {
+        setAuthMessage("No pudimos inicializar la sesión local.");
+        return;
+      }
+
+      const authResult = await Promise.race([
+        supabase.auth.signInWithPassword({ email, password }),
+        new Promise<never>((_, reject) => {
+          window.setTimeout(
+            () => reject(new Error("AUTH_TIMEOUT")),
+            15_000,
+          );
+        }),
+      ]);
+
+      if (authResult.error) {
+        setAuthMessage("No pudimos iniciar sesión con esas credenciales.");
+        return;
+      }
+
+      const activeSession =
+        authResult.data.session ||
+        (await supabase.auth.getSession()).data.session;
+      if (!activeSession?.access_token) {
+        setAuthMessage("No pudimos cargar la sesión local. Intenta de nuevo.");
+        return;
+      }
+
+      router.replace(`/${locale}/dashboard`);
+      router.refresh();
+    } catch (error) {
+      setAuthMessage(
+        error instanceof Error && error.message === "AUTH_TIMEOUT"
+          ? "Supabase tardó demasiado en responder. Revisa tu conexión e intenta de nuevo."
+          : "Ocurrió un error al iniciar sesión. Intenta de nuevo.",
+      );
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setAuthMessage("No pudimos iniciar sesion con esas credenciales.");
-      setLoading(false);
-      return;
-    }
-
-    const activeSession = data.session || (await supabase.auth.getSession()).data.session;
-    if (!activeSession?.access_token) {
-      setAuthMessage("No pudimos cargar la sesión local. Intenta de nuevo.");
-      setLoading(false);
-      return;
-    }
-
-    router.replace(`/${locale}/dashboard`);
-    router.refresh();
   };
 
   const handleRegisterIntent = () => {

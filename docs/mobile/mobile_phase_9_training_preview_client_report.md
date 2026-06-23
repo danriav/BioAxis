@@ -123,7 +123,7 @@ Comandos:
 ```powershell
 rg -n "user_id" mobile\src\lib\api\training-preview.ts mobile\src\features\workout mobile\__tests__\training-preview-client.test.ts mobile\__tests__\training-preview-view-model.test.ts
 rg -n "console\.log|refresh_token|service_role|SUPABASE_SERVICE|JWT|Bearer" mobile\src\features\workout mobile\src\lib\api\training-preview.ts
-rg -n "Ã|Â|�" mobile\src\features\workout mobile\src\lib\api\training-preview.ts mobile\__tests__\training-preview-client.test.ts mobile\__tests__\training-preview-view-model.test.ts
+rg -n "<patrones de mojibake>" mobile\src\features\workout mobile\src\lib\api\training-preview.ts mobile\__tests__\training-preview-client.test.ts mobile\__tests__\training-preview-view-model.test.ts
 ```
 
 Resultado:

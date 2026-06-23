@@ -1,5 +1,6 @@
 import os
 from datetime import date as date_type
+from datetime import datetime, timezone
 from functools import lru_cache
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from supabase import Client, create_client
 
 from app.schemas.biometric import (
     MobileAthleteProfile,
+    MobileBiometricHistoryEntry,
+    MobileBiometricHistoryResponse,
     MobileMeasurementCreateRequest,
     MobileProfileMeResponse,
     MobileProfileMutationResponse,
@@ -259,6 +262,16 @@ async def reject_client_user_id(request: Request) -> None:
             detail="user_id is not accepted on this endpoint",
         )
 
+    client_identity_headers = {
+        name.lower().replace("-", "_")
+        for name in request.headers.keys()
+    }
+    if client_identity_headers.intersection({"user_id", "x_user_id"}):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="user_id is not accepted on this endpoint",
+        )
+
     body = await request.body()
     if body and b"user_id" in body:
         raise HTTPException(
@@ -304,6 +317,90 @@ def build_mobile_athlete_profile(row: dict, *, display_name: str | None = None) 
             else None
         ),
         is_current=bool(row.get("is_current", False)),
+    )
+
+
+def _profile_recorded_at(row: dict) -> datetime:
+    value = row.get("valid_from") or row.get("created_at")
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    else:
+        raise ValueError("Biometric history row has no valid timestamp")
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed
+
+
+def _safe_ratio(numerator: float | None, denominator: float | None) -> float | None:
+    if numerator is None or denominator is None or denominator <= 0:
+        return None
+    return round(numerator / denominator, 2)
+
+
+def build_mobile_biometric_history_entry(row: dict) -> MobileBiometricHistoryEntry:
+    genero = row.get("genero")
+    hombros = _profile_float(row, "hombros")
+    cintura = _profile_float(row, "cintura")
+    cadera = _profile_float(row, "cadera")
+
+    ratio_simetria = None
+    ratio_curvatura = None
+    if genero == "mujer":
+        ratio_simetria = _safe_ratio(hombros, cadera)
+        ratio_curvatura = _safe_ratio(cintura, cadera)
+    elif genero == "hombre":
+        ratio_simetria = _safe_ratio(hombros, cintura)
+
+    return MobileBiometricHistoryEntry(
+        recorded_at=_profile_recorded_at(row),
+        is_current=bool(row.get("is_current", False)),
+        genero=genero,
+        peso=_profile_float(row, "peso"),
+        hombros=hombros,
+        pecho=_profile_float(row, "pecho"),
+        brazo=_profile_float(row, "brazo"),
+        antebrazo=_profile_float(row, "antebrazo"),
+        cintura=cintura,
+        cadera=cadera,
+        gluteo=_profile_float(row, "gluteo"),
+        pierna=_profile_float(row, "pierna"),
+        pantorrilla=_profile_float(row, "pantorrilla"),
+        ratio_simetria=ratio_simetria,
+        ratio_curvatura=ratio_curvatura,
+    )
+
+
+def get_mobile_biometric_history(current_user_id: str) -> MobileBiometricHistoryResponse:
+    try:
+        result = (
+            supabase.table("dim_atleta")
+            .select(
+                "valid_from,created_at,is_current,genero,peso,hombros,pecho,"
+                "brazo,antebrazo,cintura,cadera,gluteo,pierna,pantorrilla"
+            )
+            .eq("user_id", current_user_id)
+            .order("valid_from", desc=False)
+            .execute()
+        )
+        entries = [
+            build_mobile_biometric_history_entry(row)
+            for row in (result.data or [])
+        ]
+        entries.sort(key=lambda entry: entry.recorded_at)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Could not load biometric history",
+        ) from exc
+
+    if not entries:
+        return MobileBiometricHistoryResponse(status="empty", count=0, entries=[])
+    return MobileBiometricHistoryResponse(
+        status="ready",
+        count=len(entries),
+        entries=entries,
     )
 
 
@@ -541,6 +638,14 @@ async def get_mobile_profile(
             display_name=get_profile_display_name(current_user_id),
         ),
     )
+
+
+@app.get("/profile/history", response_model=MobileBiometricHistoryResponse)
+async def get_mobile_profile_history(
+    current_user_id: str = Depends(get_current_user_id),
+    _: None = Depends(reject_client_user_id),
+):
+    return get_mobile_biometric_history(current_user_id)
 
 
 @app.post("/profile/setup", response_model=MobileProfileMutationResponse)
